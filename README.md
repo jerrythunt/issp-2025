@@ -1,1 +1,5 @@
-Test
+## Changes:
+Created basic backend framework
+
+## Requirements:
+run "pip install -r requirements.txt"
