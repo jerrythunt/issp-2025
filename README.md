@@ -1,3 +1,10 @@
+# Frontend
+```
+cd react-frontend/
+npm start
+```
+
+# Backend
 ## Changes:
 Created basic backend framework
 
