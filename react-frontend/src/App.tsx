@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import Header from './components/Header';
@@ -8,18 +9,31 @@ import TrackingSection from './components/TrackingSection';
 import HowWorksSection from './components/HowWorksSection';
 import Footer from './components/Footer';
 import DebugInfo from './components/DebugInfo';
+import LoginPage from './pages/LoginPage';
+
+// Landing Page Component
+const LandingPage: React.FC = () => (
+  <>
+    <DebugInfo />
+    <Header />
+    <HeroSection />
+    <BenefitsSection />
+    <TrackingSection />
+    <HowWorksSection />
+    <Footer />
+  </>
+);
 
 function App() {
   return (
-    <div className="App">
-      <DebugInfo />
-      <Header />
-      <HeroSection />
-      <BenefitsSection />
-      <TrackingSection />
-      <HowWorksSection />
-      <Footer />
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

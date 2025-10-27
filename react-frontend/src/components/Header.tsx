@@ -1,11 +1,31 @@
 import React from 'react';
 import { Navbar, Nav, Container } from 'react-bootstrap';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
+  const handleSignUpClick = () => {
+    alert('Sign up functionality coming soon!');
+  };
+
+  const handleLogoClick = () => {
+    navigate('/');
+  };
+
   return (
     <Navbar expand="lg" className="navbar">
       <Container>
-        <Navbar.Brand href="#" className="navbar-brand">
+        <Navbar.Brand 
+          className="navbar-brand" 
+          style={{ cursor: 'pointer' }}
+          onClick={handleLogoClick}
+        >
           <img 
             src="/assets/images/braintest-logo.png" 
             alt="BrainTest Music Logo" 
@@ -21,16 +41,18 @@ const Header: React.FC = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ms-auto">
-            <button 
-              className="btn-login" 
-              onClick={() => alert('Login functionality coming soon!')}
-              style={{border: '2px solid #472A76', background: 'transparent', cursor: 'pointer'}}
-            >
-              Log in
-            </button>
+            {location.pathname !== '/login' && (
+              <button 
+                className="btn-login" 
+                onClick={handleLoginClick}
+                style={{border: '2px solid #472A76', background: 'transparent', cursor: 'pointer'}}
+              >
+                Log in
+              </button>
+            )}
             <button 
               className="btn-signup" 
-              onClick={() => alert('Sign up functionality coming soon!')}
+              onClick={handleSignUpClick}
               style={{border: 'none', cursor: 'pointer'}}
             >
               Sign up
