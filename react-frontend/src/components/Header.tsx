@@ -19,10 +19,10 @@ const Header: React.FC = () => {
   };
 
   return (
-    <Navbar expand="lg" className="navbar">
-      <Container>
+    <Navbar expand="lg" className="navbar fixed-navbar">
+      <Container fluid className="px-3">
         <Navbar.Brand 
-          className="navbar-brand" 
+          className="navbar-brand flex-shrink-0" 
           style={{ cursor: 'pointer' }}
           onClick={handleLogoClick}
         >
@@ -38,14 +38,14 @@ const Header: React.FC = () => {
           />
           <span className="logo-text" style={{display: 'none'}}>🧠 BrainTest Music</span>
         </Navbar.Brand>
+        
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto">
+          <Nav className="ms-auto navbar-nav-buttons">
             {location.pathname !== '/login' && (
               <button 
                 className="btn-login" 
                 onClick={handleLoginClick}
-                style={{border: '2px solid #472A76', background: 'transparent', cursor: 'pointer'}}
               >
                 Log in
               </button>
@@ -53,7 +53,6 @@ const Header: React.FC = () => {
             <button 
               className="btn-signup" 
               onClick={handleSignUpClick}
-              style={{border: 'none', cursor: 'pointer'}}
             >
               Sign up
             </button>

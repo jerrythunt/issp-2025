@@ -25,6 +25,7 @@ body {
     align-items: center;
     gap: 10px;
     text-decoration: none;
+    flex-shrink: 0;
 }
 
 .logo-image {
@@ -39,21 +40,72 @@ body {
     color: #333;
 }
 
+.navbar-nav-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .btn-login {
-    border: 2px solid #472A76;
-    color: #472A76;
+    border: 2px solid #472A76 !important;
+    background: transparent !important;
+    color: #472A76 !important;
     border-radius: 20px;
     padding: 8px 20px;
-    margin-right: 10px;
     text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+    background: #472A76 !important;
+    color: white !important;
 }
 
 .btn-signup {
-    background: #472A76;
-    color: white;
+    background: #472A76 !important;
+    color: white !important;
+    border: 2px solid #472A76 !important;
     border-radius: 20px;
     padding: 10px 20px;
     text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-signup:hover {
+    background: #5a3487 !important;
+    border-color: #5a3487 !important;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 991.98px) {
+    .navbar-nav-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .btn-login,
+    .btn-signup {
+        width: 100%;
+        text-align: center;
+        display: block;
+    }
+    
+    .navbar-toggler {
+        border: none;
+        padding: 4px 8px;
+    }
+    
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
 }
 
 /* Hero Section */
