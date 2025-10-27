@@ -1,26 +1,31 @@
 # FastAPI framework
-fastapi==0.111.1
-uvicorn[standard]==0.23.2
+fastapi==0.119.0
+uvicorn[standard]==0.37.0
+
 
 # Firebase
-firebase-admin==6.1.1
+firebase-admin==7.1.0
+
 
 # Environment variables
-python-dotenv==1.0.1
+python-dotenv==1.1.1
+
 
 # Pydantic (with email validation)
-pydantic[email]==2.6.1
+pydantic[email]==2.12.3
 
 # HTTP requests for Firebase REST API
-requests==2.31.0
+requests==2.32.3
 
 # JWT for token creation/verification
-PyJWT==2.7.0
+PyJWT==2.10.1
 
 # Testing
 pytest==8.4.2
 pytest-asyncio==0.22.0
-anyio==3.7.1
+anyio==4.11.0
+
 
 # Optional (if you handle file uploads in the future)
-python-multipart==0.0.6
+python-multipart==0.0.7
+starlette==0.48.0
