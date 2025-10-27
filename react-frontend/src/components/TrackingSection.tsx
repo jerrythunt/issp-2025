@@ -45,7 +45,7 @@ const TrackingSection: React.FC = () => {
   return (
     <section className="tracking-section content-section">
       <div className="section-container">
-        <div className="section-grid section-grid-full">
+        <div className="section-content-layout">
           <div>
             <h2 className="section-title">Tracking Mood</h2>
             <p className="section-text">

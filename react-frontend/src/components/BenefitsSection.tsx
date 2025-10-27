@@ -14,7 +14,7 @@ const BenefitsSection: React.FC = () => {
   return (
     <section className="benefits-section content-section">
       <div className="section-container">
-        <div className="section-grid">
+        <div className="section-content-layout">
           <div>
             <h2 className="section-title">Benefits of Music</h2>
             <p className="section-text">

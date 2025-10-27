@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Container } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
 const HeroSection: React.FC = () => {
   const [musicWaveError, setMusicWaveError] = useState(false);
+  const navigate = useNavigate();
 
   const handleImageLoad = () => {
     console.log('Hero image loaded');
@@ -10,6 +12,10 @@ const HeroSection: React.FC = () => {
 
   const handleMusicWaveError = () => {
     setMusicWaveError(true);
+  };
+
+  const handleSignupClick = () => {
+    navigate('/signup');
   };
 
   return (
@@ -20,7 +26,7 @@ const HeroSection: React.FC = () => {
         </h1>
         <button 
           className="hero-signup-btn" 
-          onClick={() => alert('Sign up functionality coming soon!')}
+          onClick={handleSignupClick}
           style={{border: 'none', cursor: 'pointer'}}
         >
           Sign up
