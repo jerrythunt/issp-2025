@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.env
+*.env.*
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# VS Code / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Firebase / service account (access from discord)
+*.json
+
+# Pytest / cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+htmlcov/
+
+# Uvicorn / ASGI
+*.pid
+
+# OS-specific
+.DS_Store
+Thumbs.db

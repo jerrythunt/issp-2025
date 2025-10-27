@@ -1,0 +1,48 @@
+--------------------------------------
+***INSTALL DEPENDENCIES:***
+Run from root folder:
+
+`pip install -r requirements.txt`
+--------------------------------------
+***TO LAUNCH APP:***
+`{folder}.app:main --reload`
+
+*this will probably just `app.app:main --reload`
+--------------------------------------
+***BTMUSIC.json***
+
+!KEEP IN ROOT!
+This file is our access key to the database. 
+(Located in our discord server)
+--------------------------------------
+***.ENV FILE***
+
+!KEEP IN ROOT!
+The .env file contains universal variables for accessing firebase
+--------------------------------------
+***/ROUTERS***
+
+Serves as endpoints that when visited run the logic from /services
+
+This is what should be called by frontend 
+
+i.e.
+
+/user/signup
+/user/login
+--------------------------------------
+***/SERVICES***
+
+This is where business logic goes, gets called by ROUTERS folder
+--------------------------------------
+***/UTILS***
+
+/firebase.py → Initializes Firebase Admin SDK and Firestore client
+/jwt_handler.py → Creates and decodes JWT tokens for app authentication
+--------------------------------------
+***/TESTS***
+I feel like this folder is self explanatory 
+
+in root folder:
+pytest -v
+--------------------------------------
