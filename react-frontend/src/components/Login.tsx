@@ -76,13 +76,16 @@ const Login: React.FC<LoginProps> = ({ onForgotPassword, onSignUp }) => {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="forgot-password-btn"
-          onClick={onForgotPassword}
-        >
-          Forgot Password
-        </button>
+        {/* ✅ Flex wrapper for alignment */}
+        <div className="forgot-password-wrapper">
+          <button
+            type="button"
+            className="forgot-password-btn"
+            onClick={onForgotPassword}
+          >
+            Forgot Password
+          </button>
+        </div>
 
         <button type="submit" className="login-btn">
           Log in
