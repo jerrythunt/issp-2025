@@ -16,21 +16,16 @@ const Signup: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleNext = () => {
-    setStep(step + 1);
-  };
-
-  const handleBack = () => {
-    setStep(step - 1);
-  };
+  const handleNext = () => setStep(step + 1);
+  const handleBack = () => setStep(step - 1);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
-        const { checked } = e.target as HTMLInputElement;
-        setFormData({ ...formData, [name]: checked });
+      const { checked } = e.target as HTMLInputElement;
+      setFormData({ ...formData, [name]: checked });
     } else {
-        setFormData({ ...formData, [name]: value });
+      setFormData({ ...formData, [name]: value });
     }
   };
 
@@ -54,15 +49,15 @@ const Signup: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-            setError('This email address is already in use.');
-        } else if (error.code === 'auth/invalid-email') {
-            setError('Please enter a valid email address.');
-        } else if (error.code === 'auth/weak-password') {
-            setError('The password is too weak. Please choose a stronger password.');
-        } else {
-            setError('An unknown error occurred. Please try again later.');
-        }
+      if (error.code === 'auth/email-already-in-use') {
+        setError('This email address is already in use.');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (error.code === 'auth/weak-password') {
+        setError('The password is too weak. Please choose a stronger password.');
+      } else {
+        setError('An unknown error occurred. Please try again later.');
+      }
     }
   };
 
@@ -72,7 +67,7 @@ const Signup: React.FC = () => {
       if (userCredential) {
         navigate('/dashboard');
       }
-    } catch (error) {
+    } catch {
       setError('Failed to sign in with Google. Please try again later.');
     }
   };
@@ -113,29 +108,29 @@ const Signup: React.FC = () => {
         );
       case 3:
         return (
-            <div className="form-field">
-                <label className="field-label">Birthdate</label>
-                <div className="birthdate-container">
-                    <select name="birthMonth" value={formData.birthMonth} onChange={handleChange} className="birthdate-select">
-                        <option value="">Month</option>
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                            <option key={month} value={month}>{month}</option>
-                        ))}
-                    </select>
-                    <select name="birthDay" value={formData.birthDay} onChange={handleChange} className="birthdate-select">
-                        <option value="">Day</option>
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                            <option key={day} value={day}>{day}</option>
-                        ))}
-                    </select>
-                    <select name="birthYear" value={formData.birthYear} onChange={handleChange} className="birthdate-select">
-                        <option value="">Year</option>
-                        {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                            <option key={year} value={year}>{year}</option>
-                        ))}
-                    </select>
-                </div>
+          <div className="form-field">
+            <label className="field-label">Birthdate</label>
+            <div className="birthdate-container">
+              <select name="birthMonth" value={formData.birthMonth} onChange={handleChange} className="birthdate-select">
+                <option value="">Month</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                  <option key={month} value={month}>{month}</option>
+                ))}
+              </select>
+              <select name="birthDay" value={formData.birthDay} onChange={handleChange} className="birthdate-select">
+                <option value="">Day</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <option key={day} value={day}>{day}</option>
+                ))}
+              </select>
+              <select name="birthYear" value={formData.birthYear} onChange={handleChange} className="birthdate-select">
+                <option value="">Year</option>
+                {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
+          </div>
         );
       case 4:
         return (
@@ -160,25 +155,31 @@ const Signup: React.FC = () => {
   };
 
   return (
-    <div className="signup-container">
-      <h1 className="signup-title">Sign up</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleSubmit} className="signup-form">
-        <div className="form-step">
-          {renderStep()}
-        </div>
-        <div className="navigation-buttons">
-          {step > 1 && <button type="button" onClick={handleBack} className="back-btn">Back</button>}
-          {step < 4 && <button type="button" onClick={handleNext} className="next-btn">Next</button>}
-          {step === 4 && <button type="submit" className="signup-btn">Sign up</button>}
-        </div>
-      </form>
-      <button type="button" className="google-btn" onClick={handleGoogleSignIn}>Sign up with Google</button>
-      <div className="login-section">
-        <p className="login-text">Already have an account?</p>
-        <a href="/login" className="login-btn-link">Log in</a>
+    <main className="signup-wrapper">
+      <div className="signup-inner">
+        <section className="signup-container">
+          <h1 className="signup-title">Sign up</h1>
+          {error && <p style={{ color: 'red' }}>{error}</p>}
+          <form onSubmit={handleSubmit} className="signup-form">
+            <div className="form-step">{renderStep()}</div>
+            <div className="navigation-buttons">
+              {step > 1 && <button type="button" onClick={handleBack} className="back-btn">Back</button>}
+              {step < 4 && <button type="button" onClick={handleNext} className="next-btn">Next</button>}
+              {step === 4 && <button type="submit" className="signup-btn">Sign up</button>}
+            </div>
+          </form>
+          <div className="signup-footer">
+            <button type="button" className="google-btn" onClick={handleGoogleSignIn}>
+              Sign up with Google
+            </button>
+            <div className="login-section">
+              <p className="login-text">Already have an account?</p>
+              <a href="/login" className="login-btn-link">Log in</a>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 
