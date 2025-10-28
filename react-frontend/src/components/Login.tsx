@@ -87,10 +87,11 @@ const Login: React.FC<LoginProps> = ({ onForgotPassword, onSignUp }) => {
         <button type="submit" className="login-btn">
           Log in
         </button>
-        <button type="button" className="login-btn google-btn" onClick={handleGoogleSignIn}>
-          Sign in with Google
-        </button>
       </form>
+
+      <button type="button" className="google-btn" onClick={handleGoogleSignIn}>
+        Sign in with Google
+      </button>
 
       <div className="signup-section">
         <span className="signup-text">Not registered yet?</span>

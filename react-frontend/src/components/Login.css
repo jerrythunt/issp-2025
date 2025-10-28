@@ -167,7 +167,7 @@
   width: 708px;
   height: 77px;
   left: 366px;
-  top: 727.33px;
+  top: 650.33px;
   
   background: #2C2C2C;
   border: 1px solid #2C2C2C;
@@ -192,6 +192,41 @@
 .login-btn:active {
   background: #1a1a1a;
   border-color: #1a1a1a;
+}
+
+/* Google Button */
+.google-btn {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  gap: 8px;
+  
+  position: absolute;
+  width: 708px;
+  height: 77px;
+  left: 366px;
+  top: 750.33px;
+  
+  background: #FFFFFF;
+  border: 1px solid #D9D9D9;
+  border-radius: 8px;
+  cursor: pointer;
+  
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 100%;
+  color: #1E1E1E;
+  
+  transition: background-color 0.2s ease;
+}
+
+.google-btn:hover {
+  background: #f5f5f5;
 }
 
 /* Signup Section */
@@ -275,6 +310,7 @@
   .password-field,
   .forgot-password-btn,
   .login-btn,
+  .google-btn,
   .signup-section {
     position: relative;
     left: auto;
@@ -296,7 +332,8 @@
   }
   
   .input-container,
-  .login-btn {
+  .login-btn,
+  .google-btn {
     width: 100%;
     max-width: 708px;
   }
