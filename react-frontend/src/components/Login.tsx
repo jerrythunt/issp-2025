@@ -1,27 +1,54 @@
 import React, { useState } from 'react';
 import './Login.css';
+import { useNavigate } from 'react-router-dom';
+import { login, signInWithGoogle } from '../firebaseAuth';
 
 interface LoginProps {
-  onLogin?: (email: string, password: string) => void;
   onForgotPassword?: () => void;
   onSignUp?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onForgotPassword, onSignUp }) => {
+const Login: React.FC<LoginProps> = ({ onForgotPassword, onSignUp }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onLogin) {
-      onLogin(email, password);
+    setError(null);
+
+    try {
+      const userCredential = await login(email, password);
+      if (userCredential) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        setError('Invalid email or password.');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else {
+        setError('An unknown error occurred. Please try again later.');
+      }
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const userCredential = await signInWithGoogle();
+      if (userCredential) {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      setError('Failed to sign in with Google. Please try again later.');
     }
   };
 
   return (
     <div className="login-container">
       <h1 className="login-title">Log in</h1>
-      
+      {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <div className="email-field">
           <label className="field-label">Email</label>
@@ -59,6 +86,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onForgotPassword, onSignUp }) =>
 
         <button type="submit" className="login-btn">
           Log in
+        </button>
+        <button type="button" className="login-btn google-btn" onClick={handleGoogleSignIn}>
+          Sign in with Google
         </button>
       </form>
 

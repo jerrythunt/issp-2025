@@ -17,6 +17,8 @@ import TeamPage from './pages/TeamPage';
 import SciencePage from './pages/SciencePage';
 import KnowledgeCenterPage from './pages/KnowledgeCenterPage';
 import ContactPage from './pages/ContactPage';
+import PostLoginPage from './pages/PostLoginPage';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
@@ -41,6 +43,7 @@ function App() {
           <Route path="/science" element={<SciencePage />} />
           <Route path="/knowledge-center" element={<KnowledgeCenterPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/dashboard" element={<PrivateRoute><PostLoginPage /></PrivateRoute>} />
         </Routes>
         <Footer />
       </div>

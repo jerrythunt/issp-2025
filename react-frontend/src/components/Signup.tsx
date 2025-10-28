@@ -1,6 +1,7 @@
-
 import React, { useState } from 'react';
 import './Signup.css';
+import { useNavigate } from 'react-router-dom';
+import { signUp, signInWithGoogle } from '../firebaseAuth';
 
 const Signup: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -12,6 +13,8 @@ const Signup: React.FC = () => {
     birthYear: '',
     agreedToTerms: false,
   });
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleNext = () => {
     setStep(step + 1);
@@ -31,10 +34,47 @@ const Signup: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log(formData);
+    setError(null);
+
+    if (!formData.email.includes('@')) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!formData.agreedToTerms) {
+      setError("You must agree to the Terms and Conditions.");
+      return;
+    }
+
+    try {
+      const userCredential = await signUp(formData.email, formData.password);
+      if (userCredential) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+            setError('This email address is already in use.');
+        } else if (error.code === 'auth/invalid-email') {
+            setError('Please enter a valid email address.');
+        } else if (error.code === 'auth/weak-password') {
+            setError('The password is too weak. Please choose a stronger password.');
+        } else {
+            setError('An unknown error occurred. Please try again later.');
+        }
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const userCredential = await signInWithGoogle();
+      if (userCredential) {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      setError('Failed to sign in with Google. Please try again later.');
+    }
   };
 
   const renderStep = () => {
@@ -122,6 +162,7 @@ const Signup: React.FC = () => {
   return (
     <div className="signup-container">
       <h1 className="signup-title">Sign up</h1>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit} className="signup-form">
         <div className="form-step">
           {renderStep()}
@@ -132,6 +173,7 @@ const Signup: React.FC = () => {
           {step === 4 && <button type="submit" className="signup-btn">Sign up</button>}
         </div>
       </form>
+      <button type="button" className="google-btn" onClick={handleGoogleSignIn}>Sign up with Google</button>
       <div className="login-section">
         <p className="login-text">Already have an account?</p>
         <a href="/login" className="login-btn-link">Log in</a>

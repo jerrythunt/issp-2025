@@ -1,25 +1,21 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Login from '../components/Login';
 
 const LoginPage: React.FC = () => {
-  const handleLogin = (email: string, password: string) => {
-    console.log('Login attempted with:', { email, password });
-    // Add your login logic here (API call, authentication, etc.)
-  };
+  const navigate = useNavigate();
 
   const handleForgotPassword = () => {
-    console.log('Forgot password clicked');
     // Add forgot password logic here
+    console.log('Forgot password clicked');
   };
 
   const handleSignUp = () => {
-    console.log('Sign up clicked');
-    // Add navigation to sign up page here
+    navigate('/signup');
   };
 
   return (
     <Login
-      onLogin={handleLogin}
       onForgotPassword={handleForgotPassword}
       onSignUp={handleSignUp}
     />
