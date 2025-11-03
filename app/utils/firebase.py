@@ -34,3 +34,23 @@ if not firebase_admin._apps:
 # The 'db' object allows us to read and write data to Firestore.
 # Example usage in services: db.collection("users").document(uid).set({...})
 db = firestore.client()
+
+## Test if you can connect
+# if __name__ == "__main__":
+#     try:
+#         # Reference a test collection and document
+#         test_ref = db.collection("test_connection").document("ping")
+
+#         # Write a simple test document
+#         test_ref.set({"status": "ok"})
+#         print("✅ Successfully wrote test document!")
+
+#         # Read it back
+#         doc = test_ref.get()
+#         if doc.exists:
+#             print("✅ Successfully read document:", doc.to_dict())
+#         else:
+#             print("⚠️ Document not found")
+
+#     except Exception as e:
+#         print("❌ Firebase connection failed:", e)

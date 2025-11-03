@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users  # Import the users router
+from app.routers import users, playlists, moods  # Import the users router
 from app.utils.firebase import db  # Import Firestore client (initializes Firebase Admin)
 
 # Create FastAPI app instance
@@ -20,6 +20,8 @@ app.add_middleware(
 # Routers group related endpoints together
 # Here we include the `users` router, which handles /users/signup and /users/login
 app.include_router(users.router)
+app.include_router(playlists.router)
+app.include_router(moods.router)
 
 
 # Root endpoint, confirmation that it's running
