@@ -300,3 +300,145 @@
   }
 }
 
+/* Genre Selection Styles */
+.field-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #757575;
+  margin-bottom: 16px;
+  margin-top: 4px;
+}
+
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.genre-chip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 16px;
+  background: #FFFFFF;
+  border: 1px solid #D9D9D9;
+  border-radius: 8px;
+  color: #303030;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 44px;
+}
+
+.genre-chip:hover {
+  background: #f5f5f5;
+  border-color: #2C2C2C;
+}
+
+.genre-chip.selected {
+  background: #2C2C2C;
+  color: #F5F5F5;
+  border-color: #2C2C2C;
+}
+
+.genre-chip.selected:hover {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+.selected-count {
+  margin-top: 16px;
+}
+
+.selection-info {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #2C2C2C;
+  text-align: center;
+  margin: 0;
+}
+
+.final-step-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.skip-btn {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 24px;
+  background: #FFFFFF;
+  border: 1px solid #D9D9D9;
+  color: #303030;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 52px;
+}
+
+.skip-btn:hover {
+  background: #f5f5f5;
+  border-color: #2C2C2C;
+}
+
+/* Override existing .signup-btn for step 5 */
+.final-step-buttons .signup-btn {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 24px;
+  background: #2C2C2C;
+  color: #F5F5F5;
+  border: 1px solid #2C2C2C;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 52px;
+}
+
+.final-step-buttons .signup-btn:hover {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+/* Responsive adjustments for genre grid */
+@media (max-width: 768px) {
+  .genre-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  
+  .genre-chip {
+    padding: 10px 12px;
+    font-size: 13px;
+    min-height: 40px;
+  }
+  
+  .final-step-buttons {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .genre-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
