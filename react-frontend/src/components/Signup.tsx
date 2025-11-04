@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Signup.css';
 import { useNavigate } from 'react-router-dom';
-import { signUp, signInWithGoogle } from '../firebaseAuth';
+import { signUp, signInWithGoogle, signInAnonymously } from '../firebaseAuth';
 
 const Signup: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -12,19 +12,21 @@ const Signup: React.FC = () => {
     birthDay: '',
     birthYear: '',
     agreedToTerms: false,
-    selectedGenres: [] as string[], // Added for genre selection
+    selectedGenres: [] as string[],
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Available music genres (general and accessible)
   const musicGenres = [
     'Classical', 'Jazz', 'Rock', 'Pop', 'Country', 'Folk',
     'Blues', 'Gospel', 'Reggae', 'R&B/Soul',
     'Instrumental', 'Nature Sounds', 'Relaxation Music'
   ];
 
-  const handleNext = () => setStep(step + 1);
+  const handleNext = () => {
+    setStep(step + 1)
+  };
   const handleBack = () => setStep(step - 1);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -37,7 +39,6 @@ const Signup: React.FC = () => {
     }
   };
 
-  // Handle genre selection
   const handleGenreToggle = (genre: string) => {
     setFormData(prev => ({
       ...prev,
@@ -47,31 +48,62 @@ const Signup: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (step < 5) {
+        handleNext();
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     if (!formData.email.includes('@')) {
       setError("Please enter a valid email address.");
+      setLoading(false);
       return;
     }
 
     if (!formData.agreedToTerms) {
       setError("You must agree to the Terms and Conditions.");
+      setLoading(false);
       return;
     }
 
-    // For now, just logging the selected genres (no backend integration)
-    console.log('Selected genres:', formData.selectedGenres);
-
     try {
       const userCredential = await signUp(formData.email, formData.password);
-      if (userCredential) {
+      if (userCredential && userCredential.user) {
+        if (formData.selectedGenres.length > 0) {
+          try {
+            const token = await userCredential.user.getIdToken();
+            await fetch('http://localhost:8888/api/music/playlist', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                name: 'My First Playlist',
+                genres: formData.selectedGenres,
+              }),
+            });
+          } catch (playlistError) {
+            console.error('Failed to create playlist:', playlistError);
+          }
+        }
         navigate('/dashboard');
       }
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
-        setError('This email address is already in use.');
+        setError(
+          <span>
+            This email address is already in use. Please <a href="/login">log in</a>.
+          </span>
+        );
       } else if (error.code === 'auth/invalid-email') {
         setError('Please enter a valid email address.');
       } else if (error.code === 'auth/weak-password') {
@@ -79,6 +111,8 @@ const Signup: React.FC = () => {
       } else {
         setError('An unknown error occurred. Please try again later.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,6 +126,16 @@ const Signup: React.FC = () => {
       setError('Failed to sign in with Google. Please try again later.');
     }
   };
+  
+  const handleSkip = async () => {
+    try {
+      await signInAnonymously();
+      navigate('/dashboard');
+    } catch (error) {
+      setError('Failed to skip. Please try again later.');
+    }
+  };
+
 
   const renderStep = () => {
     switch (step) {
@@ -107,6 +151,7 @@ const Signup: React.FC = () => {
                 className="input-field"
                 value={formData.email}
                 onChange={handleChange}
+                onKeyDown={handleKeyDown}
               />
             </div>
           </div>
@@ -123,6 +168,7 @@ const Signup: React.FC = () => {
                 className="input-field"
                 value={formData.password}
                 onChange={handleChange}
+                onKeyDown={handleKeyDown}
               />
             </div>
           </div>
@@ -142,8 +188,7 @@ const Signup: React.FC = () => {
                 <option value="">Day</option>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                   <option key={day} value={day}>{day}</option>
-                ))}
-              </select>
+                ))}</select>
               <select name="birthYear" value={formData.birthYear} onChange={handleChange} className="birthdate-select">
                 <option value="">Year</option>
                 {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(year => (
@@ -206,25 +251,27 @@ const Signup: React.FC = () => {
       <div className="signup-inner">
         <section className="signup-container">
           <h1 className="signup-title">Sign up</h1>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          <form onSubmit={handleSubmit} className="signup-form">
+          {error && <div className="error-message">{error}</div>}
+          <form className="signup-form">
             <div className="form-step">{renderStep()}</div>
             <div className="navigation-buttons">
               {step > 1 && <button type="button" onClick={handleBack} className="back-btn">Back</button>}
               {step < 5 && <button type="button" onClick={handleNext} className="next-btn">Next</button>}
               {step === 5 && (
                 <div className="final-step-buttons">
-                  <button type="button" onClick={() => setStep(4)} className="skip-btn">
+                  <button type="button" onClick={handleSkip} className="skip-btn" disabled={loading}>
                     Skip for now
                   </button>
-                  <button type="submit" className="signup-btn">Sign up</button>
+                  <button type="button" onClick={handleSubmit} className="signup-btn" disabled={loading}>
+                    {loading ? 'Signing up...' : 'Sign up'}
+                  </button>
                 </div>
               )}
             </div>
           </form>
           {step < 5 && (
             <div className="signup-footer">
-              <button type="button" className="google-btn" onClick={handleGoogleSignIn}>
+              <button type="button" className="google-btn" onClick={handleGoogleSignIn} disabled={loading}>
                 Sign up with Google
               </button>
               <div className="login-section">

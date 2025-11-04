@@ -1,21 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Container } from 'react-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../firebaseConfig';
+import { logout } from '../firebaseAuth';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleLoginClick = () => {
     navigate('/login');
   };
 
   const handleSignUpClick = () => {
-    navigate('/signup'); // ✅ Now routes to signup page
+    navigate('/signup');
   };
 
   const handleLogoClick = () => {
     navigate('/');
+  };
+
+  const handleLogoutClick = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  const handleDashboardClick = () => {
+    navigate('/dashboard');
   };
 
   return (
@@ -47,14 +67,27 @@ const Header: React.FC = () => {
             className="ms-auto d-flex align-items-center"
             style={{ marginRight: '80px' }}
           >
-            {location.pathname !== '/login' && (
-              <button className="btn-login me-3" onClick={handleLoginClick}>
-                Log in
-              </button>
+            {user ? (
+              <>
+                <button className="btn-login me-3" onClick={handleDashboardClick}>
+                  Dashboard
+                </button>
+                <button className="btn-login me-3" onClick={handleLogoutClick}>
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                {location.pathname !== '/login' && (
+                  <button className="btn-login me-3" onClick={handleLoginClick}>
+                    Log in
+                  </button>
+                )}
+                <button className="btn-signup" onClick={handleSignUpClick}>
+                  Sign up
+                </button>
+              </>
             )}
-            <button className="btn-signup" onClick={handleSignUpClick}>
-              Sign up
-            </button>
           </Nav>
         </Navbar.Collapse>
       </Container>
