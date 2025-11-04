@@ -39,14 +39,26 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard">
-      <h1>Welcome Back!</h1>
-      <p>This is your personalized dashboard.</p>
-      <button onClick={() => setIsModalOpen(true)} className="change-genres-button">Change Genres</button>
-      <div className="playlists-container">
-        {playlists.map((playlist, index) => (
-          <PlaylistCard key={index} playlist={playlist} />
-        ))}
-      </div>
+      <aside className="sidebar">
+        <h2>Your Playlists</h2>
+        <div className="sidebar-playlists">
+          {playlists.map((playlist, index) => (
+            <div key={index} className="sidebar-playlist-item">
+              {playlist.name}
+            </div>
+          ))}
+        </div>
+      </aside>
+      <main className="main-content">
+        <h1>Good afternoon</h1>
+        <button onClick={() => setIsModalOpen(true)} className="change-genres-button">Change Genres</button>
+        <h2>Your Playlists</h2>
+        <div className="playlists-container">
+          {playlists.map((playlist, index) => (
+            <PlaylistCard key={index} playlist={playlist} />
+          ))}
+        </div>
+      </main>
       <GenreSelectionModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
