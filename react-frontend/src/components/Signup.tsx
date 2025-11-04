@@ -77,25 +77,7 @@ const Signup: React.FC = () => {
     try {
       const userCredential = await signUp(formData.email, formData.password);
       if (userCredential && userCredential.user) {
-        if (formData.selectedGenres.length > 0) {
-          try {
-            const token = await userCredential.user.getIdToken();
-            await fetch('http://localhost:8888/api/music/playlist', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                name: 'My First Playlist',
-                genres: formData.selectedGenres,
-              }),
-            });
-          } catch (playlistError) {
-            console.error('Failed to create playlist:', playlistError);
-          }
-        }
-        navigate('/dashboard');
+        navigate('/dashboard', { state: { selectedGenres: formData.selectedGenres } });
       }
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {

@@ -1,11 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import PlaylistCard from '../components/PlaylistCard';
+import GenreSelectionModal from '../components/GenreSelectionModal';
+import './Dashboard.css';
+
+interface Playlist {
+  name: string;
+  genres: string[];
+}
 
 const Dashboard: React.FC = () => {
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => {
+    const storedPlaylists = localStorage.getItem('playlists');
+    return storedPlaylists ? JSON.parse(storedPlaylists) : [];
+  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state && location.state.selectedGenres && location.state.selectedGenres.length > 0) {
+      updatePlaylists(location.state.selectedGenres);
+    }
+  }, [location.state]);
+
+  const updatePlaylists = (selectedGenres: string[]) => {
+    const newPlaylists = selectedGenres.map((genre: string) => ({
+      name: genre,
+      genres: [genre],
+    }));
+    setPlaylists(newPlaylists);
+    localStorage.setItem('playlists', JSON.stringify(newPlaylists));
+  };
+
+  const handleSaveGenres = (selectedGenres: string[]) => {
+    updatePlaylists(selectedGenres);
+    setIsModalOpen(false);
+  };
+
   return (
-    <div style={{ padding: '50px', textAlign: 'center' }}>
+    <div className="dashboard">
       <h1>Welcome Back!</h1>
       <p>This is your personalized dashboard.</p>
-      {/* You can add more components and features here */}
+      <button onClick={() => setIsModalOpen(true)} className="change-genres-button">Change Genres</button>
+      <div className="playlists-container">
+        {playlists.map((playlist, index) => (
+          <PlaylistCard key={index} playlist={playlist} />
+        ))}
+      </div>
+      <GenreSelectionModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSaveGenres} 
+      />
     </div>
   );
 };
