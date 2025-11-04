@@ -12,9 +12,17 @@ const Signup: React.FC = () => {
     birthDay: '',
     birthYear: '',
     agreedToTerms: false,
+    selectedGenres: [] as string[], // Added for genre selection
   });
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Available music genres (general and accessible)
+  const musicGenres = [
+    'Classical', 'Jazz', 'Rock', 'Pop', 'Country', 'Folk',
+    'Blues', 'Gospel', 'Reggae', 'R&B/Soul',
+    'Instrumental', 'Nature Sounds', 'Relaxation Music'
+  ];
 
   const handleNext = () => setStep(step + 1);
   const handleBack = () => setStep(step - 1);
@@ -27,6 +35,16 @@ const Signup: React.FC = () => {
     } else {
       setFormData({ ...formData, [name]: value });
     }
+  };
+
+  // Handle genre selection
+  const handleGenreToggle = (genre: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedGenres: prev.selectedGenres.includes(genre)
+        ? prev.selectedGenres.filter(g => g !== genre)
+        : [...prev.selectedGenres, genre]
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +60,9 @@ const Signup: React.FC = () => {
       setError("You must agree to the Terms and Conditions.");
       return;
     }
+
+    // For now, just logging the selected genres (no backend integration)
+    console.log('Selected genres:', formData.selectedGenres);
 
     try {
       const userCredential = await signUp(formData.email, formData.password);
@@ -149,6 +170,32 @@ const Signup: React.FC = () => {
             </div>
           </div>
         );
+      case 5:
+        return (
+          <div className="form-field">
+            <label className="field-label">What music genres do you enjoy?</label>
+            <p className="field-subtitle">Select all that apply (you can skip this step)</p>
+            <div className="genre-grid">
+              {musicGenres.map((genre) => (
+                <button
+                  key={genre}
+                  type="button"
+                  className={`genre-chip ${formData.selectedGenres.includes(genre) ? 'selected' : ''}`}
+                  onClick={() => handleGenreToggle(genre)}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
+            <div className="selected-count">
+              {formData.selectedGenres.length > 0 && (
+                <p className="selection-info">
+                  {formData.selectedGenres.length} genre{formData.selectedGenres.length !== 1 ? 's' : ''} selected
+                </p>
+              )}
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -164,19 +211,28 @@ const Signup: React.FC = () => {
             <div className="form-step">{renderStep()}</div>
             <div className="navigation-buttons">
               {step > 1 && <button type="button" onClick={handleBack} className="back-btn">Back</button>}
-              {step < 4 && <button type="button" onClick={handleNext} className="next-btn">Next</button>}
-              {step === 4 && <button type="submit" className="signup-btn">Sign up</button>}
+              {step < 5 && <button type="button" onClick={handleNext} className="next-btn">Next</button>}
+              {step === 5 && (
+                <div className="final-step-buttons">
+                  <button type="button" onClick={() => setStep(4)} className="skip-btn">
+                    Skip for now
+                  </button>
+                  <button type="submit" className="signup-btn">Sign up</button>
+                </div>
+              )}
             </div>
           </form>
-          <div className="signup-footer">
-            <button type="button" className="google-btn" onClick={handleGoogleSignIn}>
-              Sign up with Google
-            </button>
-            <div className="login-section">
-              <p className="login-text">Already have an account?</p>
-              <a href="/login" className="login-btn-link">Log in</a>
+          {step < 5 && (
+            <div className="signup-footer">
+              <button type="button" className="google-btn" onClick={handleGoogleSignIn}>
+                Sign up with Google
+              </button>
+              <div className="login-section">
+                <p className="login-text">Already have an account?</p>
+                <a href="/login" className="login-btn-link">Log in</a>
+              </div>
             </div>
-          </div>
+          )}
         </section>
       </div>
     </main>
