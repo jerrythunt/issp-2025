@@ -1,12 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import Header from './components/Header';
-import HeroSection from './components/HeroSection';
-import BenefitsSection from './components/BenefitsSection';
-import TrackingSection from './components/TrackingSection';
-import HowWorksSection from './components/HowWorksSection';
 import Footer from './components/Footer';
 import DebugInfo from './components/DebugInfo';
 import SignupPage from './pages/SignupPage';
@@ -17,24 +13,35 @@ import TeamPage from './pages/TeamPage';
 import SciencePage from './pages/SciencePage';
 import KnowledgeCenterPage from './pages/KnowledgeCenterPage';
 import ContactPage from './pages/ContactPage';
-import PostLoginPage from './pages/PostLoginPage';
+import FrontPage from './pages/FrontPage';
+import Dashboard from './pages/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './firebaseConfig';
 
 function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <Router>
       <div className="App">
         <DebugInfo />
         <Header />
         <Routes>
-          <Route path="/" element={
-            <>
-              <HeroSection />
-              <BenefitsSection />
-              <TrackingSection />
-              <HowWorksSection />
-            </>
-          } />
+          <Route path="/" element={<FrontPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -43,7 +50,7 @@ function App() {
           <Route path="/science" element={<SciencePage />} />
           <Route path="/knowledge-center" element={<KnowledgeCenterPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/dashboard" element={<PrivateRoute><PostLoginPage /></PrivateRoute>} />
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         </Routes>
         <Footer />
       </div>
