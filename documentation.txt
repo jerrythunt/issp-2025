@@ -5,9 +5,9 @@ Run from root folder:
 `pip install -r requirements.txt`
 --------------------------------------
 ***TO LAUNCH APP:***
-`{folder}.app:main --reload`
+`uvicorn app.main:app --reload `
 
-*this will probably just `app.app:main --reload`
+*this will probably just `uvicorn app.app:main --reload`
 --------------------------------------
 ***BTMUSIC.json***
 
