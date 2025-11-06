@@ -31,6 +31,14 @@ def call_fastapi(method, endpoint, token, params=None):
     response = requests.request(method, url, headers=headers, params=params)
     return response.json()
 
+# Delete a playlist
+def delete_playlist(token, playlist_id):
+    response = call_fastapi("DELETE", f"/playlists/{playlist_id}", token)
+    print(f"✅ /playlists/{playlist_id} (delete) response:")
+    print(json.dumps(response, indent=2), "\n")
+    return response
+
+
 # MAIN TEST FLOW
 if __name__ == "__main__":
     try:
@@ -55,14 +63,36 @@ if __name__ == "__main__":
         print(json.dumps(playlists, indent=2), "\n")
 
         # Create a new playlist
-        new_playlist_name = "Test Playlist"
+        new_playlist_name = "Rock n Roll"
         created_playlist = call_fastapi("POST", f"/playlists/?name={new_playlist_name}", token)
         print("✅ /playlists/ (create) response:")
         print(json.dumps(created_playlist, indent=2), "\n")
+        
+        new_playlist_name = "Jazz"
+        created_playlist = call_fastapi("POST", f"/playlists/?name={new_playlist_name}", token)
+        print("✅ /playlists/ (create) response:")
+        print(json.dumps(created_playlist, indent=2), "\n")
+        
+        new_playlist_name = "80's Pop"
+        created_playlist = call_fastapi("POST", f"/playlists/?name={new_playlist_name}", token)
+        print("✅ /playlists/ (create) response:")
+        print(json.dumps(created_playlist, indent=2), "\n")
+        
+
+        # Delete a playlist
+        if playlists.get("playlists"):
+            first_playlist_id = playlists["playlists"][0].get("id")  # Make sure your playlist doc includes 'id'
+            delete_playlist(token, first_playlist_id)
+
 
         # Step 5: Moods endpoints
         # Record a mood
         mood = "Happy"
+        recorded_mood = call_fastapi("POST", f"/moods/?mood={mood}", token)
+        print("✅ /moods/ (record) response:")
+        print(json.dumps(recorded_mood, indent=2), "\n")
+        
+        mood = "Sad"
         recorded_mood = call_fastapi("POST", f"/moods/?mood={mood}", token)
         print("✅ /moods/ (record) response:")
         print(json.dumps(recorded_mood, indent=2), "\n")
@@ -71,6 +101,17 @@ if __name__ == "__main__":
         moods = call_fastapi("GET", "/moods/", token)
         print("✅ /moods/ (list) response:")
         print(json.dumps(moods, indent=2), "\n")
+        
+        # Step 6: Import songs from Last.fm
+        imported_songs = call_fastapi("POST", "/songs/import", token)
+        print("✅ /songs/import response:")
+        print(json.dumps(imported_songs, indent=2), "\n")
+
+        # Step 7: List available songs (optional endpoint)
+        songs = call_fastapi("GET", "/songs/", token)
+        print("✅ /songs/ (list) response:")
+        print(json.dumps(songs, indent=2), "\n")
+
 
     except requests.HTTPError as e:
         print("HTTP Error:", e.response.text)
