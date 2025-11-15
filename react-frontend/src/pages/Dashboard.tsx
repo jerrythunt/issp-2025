@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PlaylistCard from '../components/PlaylistCard';
 import GenreSelectionModal from '../components/GenreSelectionModal';
+import LocalAudioPlayer from '../components/LocalAudioPlayer';
 import './Dashboard.css';
 
 interface Playlist {
@@ -50,7 +51,8 @@ const Dashboard: React.FC = () => {
         </div>
       </aside>
       <main className="main-content">
-        <h1>Good afternoon</h1>
+  <h1>Good afternoon</h1>
+  <LocalAudioPlayer />
         <button onClick={() => setIsModalOpen(true)} className="change-genres-button">Change Genres</button>
         <h2>Your Playlists</h2>
         <div className="playlists-container">
