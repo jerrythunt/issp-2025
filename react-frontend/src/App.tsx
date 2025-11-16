@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import Header from './components/Header';
@@ -15,9 +15,36 @@ import KnowledgeCenterPage from './pages/KnowledgeCenterPage';
 import ContactPage from './pages/ContactPage';
 import FrontPage from './pages/FrontPage';
 import Dashboard from './pages/Dashboard';
+import PlaylistDetail from './pages/PlaylistDetail';
 import PrivateRoute from './components/PrivateRoute';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './firebaseConfig';
+
+function AppContent() {
+  const location = useLocation();
+  const isDashboard = location.pathname === '/dashboard' || location.pathname.startsWith('/playlist/');
+
+  return (
+    <div className="App">
+      <DebugInfo />
+      {!isDashboard && <Header />}
+      <Routes>
+        <Route path="/" element={<FrontPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/team" element={<TeamPage />} />
+        <Route path="/science" element={<SciencePage />} />
+        <Route path="/knowledge-center" element={<KnowledgeCenterPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/playlist/:playlistName" element={<PrivateRoute><PlaylistDetail /></PrivateRoute>} />
+      </Routes>
+      {!isDashboard && <Footer />}
+    </div>
+  );
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,23 +64,7 @@ function App() {
 
   return (
     <Router>
-      <div className="App">
-        <DebugInfo />
-        <Header />
-        <Routes>
-          <Route path="/" element={<FrontPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/blog" element={<BlogPage />} />
-          <Route path="/team" element={<TeamPage />} />
-          <Route path="/science" element={<SciencePage />} />
-          <Route path="/knowledge-center" element={<KnowledgeCenterPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        </Routes>
-        <Footer />
-      </div>
+      <AppContent />
     </Router>
   );
 }
