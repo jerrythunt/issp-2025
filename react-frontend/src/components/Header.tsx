@@ -1,14 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Container } from 'react-bootstrap';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../firebaseConfig';
+import { logout } from '../firebaseAuth';
 
 const Header: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
+  const handleSignUpClick = () => {
+    navigate('/signup');
+  };
+
+  const handleLogoClick = () => {
+    navigate('/');
+  };
+
+  const handleLogoutClick = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  const handleDashboardClick = () => {
+    navigate('/dashboard');
+  };
+
   return (
-    <Navbar expand="lg" className="navbar">
-      <Container>
-        <Navbar.Brand href="#" className="navbar-brand">
-          <img 
-            src="/assets/images/braintest-logo.png" 
-            alt="BrainTest Music Logo" 
+    <Navbar expand="lg" className="navbar fixed-navbar">
+      <Container fluid className="px-5">
+        <Navbar.Brand
+          className="navbar-brand d-flex align-items-center"
+          style={{ cursor: 'pointer', marginLeft: '80px' }}
+          onClick={handleLogoClick}
+        >
+          <img
+            src="/assets/images/braintest-logo.png"
+            alt="BrainTest Music Logo"
             className="logo-image"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
@@ -16,25 +56,38 @@ const Header: React.FC = () => {
               if (logoText) logoText.style.display = 'inline';
             }}
           />
-          <span className="logo-text" style={{display: 'none'}}>🧠 BrainTest Music</span>
+          <span className="logo-text" style={{ display: 'none' }}>
+            🧠 BrainTest Music
+          </span>
         </Navbar.Brand>
+
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto">
-            <button 
-              className="btn-login" 
-              onClick={() => alert('Login functionality coming soon!')}
-              style={{border: '2px solid #472A76', background: 'transparent', cursor: 'pointer'}}
-            >
-              Log in
-            </button>
-            <button 
-              className="btn-signup" 
-              onClick={() => alert('Sign up functionality coming soon!')}
-              style={{border: 'none', cursor: 'pointer'}}
-            >
-              Sign up
-            </button>
+          <Nav
+            className="ms-auto d-flex align-items-center"
+            style={{ marginRight: '80px' }}
+          >
+            {user ? (
+              <>
+                <button className="btn-login me-3" onClick={handleDashboardClick}>
+                  Dashboard
+                </button>
+                <button className="btn-login me-3" onClick={handleLogoutClick}>
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                {location.pathname !== '/login' && (
+                  <button className="btn-login me-3" onClick={handleLoginClick}>
+                    Log in
+                  </button>
+                )}
+                <button className="btn-signup" onClick={handleSignUpClick}>
+                  Sign up
+                </button>
+              </>
+            )}
           </Nav>
         </Navbar.Collapse>
       </Container>
