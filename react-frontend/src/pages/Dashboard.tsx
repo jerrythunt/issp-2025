@@ -1,85 +1,69 @@
-import React, { useState } from 'react';
-import SideNav from '../components/dashboard/SideNav';
-import PlaylistList from '../components/dashboard/PlaylistList';
-import Timeline from '../components/dashboard/Timeline';
-import AudioPlayer from '../components/dashboard/AudioPlayer';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import PlaylistCard from '../components/PlaylistCard';
+import GenreSelectionModal from '../components/GenreSelectionModal';
+import './Dashboard.css';
 
-export type Track = {
-  id: string;
-  title: string;
-  artist: string;
-  url: string;     // audio file
-  date: string;    // e.g., "02.10"
-};
-
-const sampleTracks: Track[] = [
-  {
-    id: 't1',
-    title: 'Song Alpha',
-    artist: 'Artist One',
-    // Put your own file into public/assets/audio/sample1.mp3 or use a demo URL:
-    url: '/assets/audio/sample1.mp3',
-    date: '02.10',
-  },
-  {
-    id: 't2',
-    title: 'Song Beta',
-    artist: 'Artist Two',
-    url: '/assets/audio/sample2.mp3',
-    date: '01.10',
-  },
-];
+interface Playlist {
+  name: string;
+  genres: string[];
+}
 
 const Dashboard: React.FC = () => {
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(sampleTracks[0] || null);
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => {
+    const storedPlaylists = localStorage.getItem('playlists');
+    return storedPlaylists ? JSON.parse(storedPlaylists) : [];
+  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const location = useLocation();
 
-  const playlists = [
-    'Playlist Title',
-    'Playlist Title',
-    'Playlist Title',
-    'Playlist Title',
-    'Playlist Title',
-  ];
+  useEffect(() => {
+    if (location.state && location.state.selectedGenres && location.state.selectedGenres.length > 0) {
+      updatePlaylists(location.state.selectedGenres);
+    }
+  }, [location.state]);
 
-  const handlePlayTrack = (track: Track) => {
-    setCurrentTrack(track);
+  const updatePlaylists = (selectedGenres: string[]) => {
+    const newPlaylists = selectedGenres.map((genre: string) => ({
+      name: genre,
+      genres: [genre],
+    }));
+    setPlaylists(newPlaylists);
+    localStorage.setItem('playlists', JSON.stringify(newPlaylists));
+  };
+
+  const handleSaveGenres = (selectedGenres: string[]) => {
+    updatePlaylists(selectedGenres);
+    setIsModalOpen(false);
   };
 
   return (
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidenav">
-        <SideNav
-          appTitle="BrainTest Music"
-          version="5.5.1"
-          playlists={playlists}
-        />
+    <div className="dashboard">
+      <aside className="sidebar">
+        <h2>Your Playlists</h2>
+        <div className="sidebar-playlists">
+          {playlists.map((playlist, index) => (
+            <div key={index} className="sidebar-playlist-item">
+              {playlist.name}
+            </div>
+          ))}
+        </div>
       </aside>
-
-      <main className="dashboard-main">
-        <header className="dashboard-header">
-          <h2>Dashboard</h2>
-        </header>
-
-        <section>
-          <h3 className="section-heading">Playlists</h3>
-          <PlaylistList
-            playlists={playlists}
-            onSelect={(name) => console.log('Selected playlist:', name)}
-          />
-        </section>
-
-        <section style={{ marginTop: 24 }}>
-          <h3 className="section-heading">Timeline</h3>
-          <Timeline
-            tracks={sampleTracks}
-            onPlay={handlePlayTrack}
-          />
-        </section>
+      <main className="main-content">
+        <h1>Good afternoon</h1>
+        <button onClick={() => setIsModalOpen(true)} className="change-genres-button">Change Genres</button>
+        <h2>Your Playlists</h2>
+        <div className="playlists-container">
+          {playlists.map((playlist, index) => (
+            <PlaylistCard key={index} playlist={playlist} />
+          ))}
+        </div>
       </main>
-
-      <footer className="dashboard-player">
-        <AudioPlayer track={currentTrack} />
-      </footer>
+      <GenreSelectionModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSaveGenres} 
+      />
     </div>
   );
 };

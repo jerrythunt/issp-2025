@@ -1,0 +1,45 @@
+.playlist-card {
+  background: #181818;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: left;
+  transition: background-color 0.3s ease;
+  width: 200px;
+  cursor: pointer;
+}
+
+.playlist-card:hover {
+  background: #282828;
+}
+
+.playlist-card-image {
+  width: 100%;
+  padding-bottom: 100%;
+  background-color: #333;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.playlist-card-image .icon {
+  font-size: 50px;
+  color: #b3b3b3;
+}
+
+.playlist-card h3 {
+  font-size: 1rem;
+  font-weight: bold;
+  color: white;
+  margin: 0 0 5px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-card p {
+  font-size: 0.875rem;
+  color: #b3b3b3;
+  margin: 0;
+}
