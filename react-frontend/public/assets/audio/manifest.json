@@ -1,6 +1,8 @@
 [
-  {
-    "name": "bpm.wav",
-    "url": "/assets/audio/bpm.wav"
-  }
+  { "name": "blues.mp3",     "url": "/assets/audio/blues.mp3" },
+  { "name": "classical.mp3", "url": "/assets/audio/classical.mp3" },
+  { "name": "gospel.mp3",    "url": "/assets/audio/gospel.mp3" },
+  { "name": "rap.mp3",       "url": "/assets/audio/rap.mp3" },
+  { "name": "rnb.mp3",       "url": "/assets/audio/rnb.mp3" },
+  { "name": "rock.mp3",      "url": "/assets/audio/rock.mp3" }
 ]
