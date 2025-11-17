@@ -18,7 +18,8 @@ import {
   MdFavoriteBorder,
   MdFavorite,
   MdMoreHoriz,
-  MdRepeat
+  MdRepeat,
+  MdMusicNote
 } from 'react-icons/md';
 import PlaylistCard from '../components/PlaylistCard';
 import GenreSelectionModal from '../components/GenreSelectionModal';
@@ -109,6 +110,10 @@ const Dashboard: React.FC = () => {
             <div className="nav-item">
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
+            </div>
+            <div className="nav-item" onClick={() => navigate('/music')}>
+              <span className="nav-icon"><MdMusicNote /></span>
+              <span>Music Player</span>
             </div>
           </nav>
         </div>
