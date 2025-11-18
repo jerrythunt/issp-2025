@@ -12,19 +12,19 @@ const SideNav: React.FC<Props> = ({ appTitle, version, playlists }) => {
 
   return (
     <div className="side-nav">
-      <div className="side-nav__brand" onClick={() => navigate('/')}>
+      <button className="side-nav__brand" onClick={() => navigate('/')}>
         {appTitle}
-      </div>
+      </button>
 
       <nav className="side-nav__section">
         <div className="side-nav__section-title">Menu</div>
-        <button className="side-nav__link" onClick={() => navigate('/dashboard')}>Dashboard</button>
-        <button className="side-nav__link">Liked</button>
-        <button className="side-nav__link">Profile</button>
-        <button className="side-nav__link">Timeline</button>
-        <button className="side-nav__link">Help</button>
-        <button className="side-nav__link">Settings</button>
-        <button className="side-nav__link">FAQs</button>
+        <button type="button" className="side-nav__link" onClick={() => navigate('/dashboard')}>Dashboard</button>
+        <button type="button" className="side-nav__link">Liked</button>
+        <button type="button" className="side-nav__link">Profile</button>
+        <button type="button" className="side-nav__link">Timeline</button>
+        <button type="button" className="side-nav__link">Help</button>
+        <button type="button" className="side-nav__link">Settings</button>
+        <button type="button" className="side-nav__link">FAQs</button>
       </nav>
 
       <div className="side-nav__section">

@@ -20,8 +20,10 @@ const Timeline: React.FC<Props> = ({ tracks, onPlay }) => {
         <div
           key={t.id}
           className="timeline-row"
-          role="row"
+          role="button"
+          tabIndex={0}
           onClick={() => onPlay(t)}
+          onKeyDown={(e) => e.key === 'Enter' && onPlay(t)}
         >
           <div className="timeline-cell">{t.title}</div>
           <div className="timeline-cell timeline-cell--date">{t.date === '02.10' ? '●' : ''}</div>

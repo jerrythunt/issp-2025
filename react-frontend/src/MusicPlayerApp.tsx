@@ -23,6 +23,7 @@ const MusicPlayerApp = () => {
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [playlists, setPlaylists] = useState({});
   const [loading, setLoading] = useState(false);
+  const [currentMood, setCurrentMood] = useState('');
 
   useEffect(() => {
     const savedUser = sessionStorage.getItem('currentUser');
@@ -88,6 +89,20 @@ const MusicPlayerApp = () => {
     setCurrentTrack(track);
     const updatedRecent = [track, ...recentlyPlayed.filter(t => t.id !== track.id)].slice(0, 10);
     saveRecentlyPlayed(updatedRecent);
+    setCurrentMood(''); // Reset mood when a new track is played
+  };
+
+  const handleMoodSelect = (mood) => {
+    setCurrentMood(mood);
+    if (currentTrack) {
+      const timelineEntry = {
+        track: currentTrack,
+        mood: mood,
+        timestamp: new Date().toISOString(),
+      };
+      const existingTimeline = JSON.parse(localStorage.getItem('timeline') || '[]');
+      localStorage.setItem('timeline', JSON.stringify([...existingTimeline, timelineEntry]));
+    }
   };
 
   const toggleFavorite = (track) => {
@@ -198,6 +213,12 @@ const MusicPlayerApp = () => {
                 customAdditionalControls={[]}
                 style={{ borderRadius: '10px', boxShadow: 'none' }}
               />
+              <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                <button onClick={() => handleMoodSelect('Happy')} style={{ background: currentMood === 'Happy' ? '#472A76' : '#f5f5f5', color: currentMood === 'Happy' ? 'white' : '#333', border: 'none', borderRadius: '20px', padding: '8px 15px', cursor: 'pointer' }}>😊 Happy</button>
+                <button onClick={() => handleMoodSelect('Sad')} style={{ background: currentMood === 'Sad' ? '#472A76' : '#f5f5f5', color: currentMood === 'Sad' ? 'white' : '#333', border: 'none', borderRadius: '20px', padding: '8px 15px', cursor: 'pointer' }}>😢 Sad</button>
+                <button onClick={() => handleMoodSelect('Energetic')} style={{ background: currentMood === 'Energetic' ? '#472A76' : '#f5f5f5', color: currentMood === 'Energetic' ? 'white' : '#333', border: 'none', borderRadius: '20px', padding: '8px 15px', cursor: 'pointer' }}>⚡ Energetic</button>
+                <button onClick={() => handleMoodSelect('Calm')} style={{ background: currentMood === 'Calm' ? '#472A76' : '#f5f5f5', color: currentMood === 'Calm' ? 'white' : '#333', border: 'none', borderRadius: '20px', padding: '8px 15px', cursor: 'pointer' }}>🧘 Calm</button>
+              </div>
             </div>
           )}
 

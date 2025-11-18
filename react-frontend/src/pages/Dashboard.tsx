@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+ 
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   MdDashboard, 
@@ -31,6 +32,20 @@ interface Playlist {
   genres: string[];
 }
 
+interface Track {
+  id: number;
+  title: string;
+  artist: string;
+  albumArt: string;
+  url: string;
+}
+
+interface TimelineEntry {
+  track: Track;
+  mood: string;
+  timestamp: number;
+}
+
 const Dashboard: React.FC = () => {
   const [playlists, setPlaylists] = useState<Playlist[]>(() => {
     const storedPlaylists = localStorage.getItem('playlists');
@@ -43,23 +58,93 @@ const Dashboard: React.FC = () => {
   // Music Player State
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  
-  // TODO: Backend Integration - Add additional state:
-  // - currentTime: number (in seconds, for progress bar)
-  // - duration: number (total track length in seconds)
-  // - volume: number (0-100)
-  // - currentTrack: { title: string, artist: string, albumArt: string }
-  // - isShuffle: boolean
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [isRepeat, setIsRepeat] = useState(false);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const tracks: Track[] = [
+    { id: 1, title: 'Jazz Tune', artist: 'Jazz Artist', albumArt: '/assets/images/jazz-album.jpg', url: '/assets/music/jazz.mp3' },
+    { id: 2, title: 'Rock Anthem', artist: 'Rock Band', albumArt: '/assets/images/rock-album.jpg', url: '/assets/music/rock.mp3' },
+    { id: 3, title: 'Classical Piece', artist: 'Classical Composer', albumArt: '/assets/images/classical-album.jpg', url: '/assets/music/classical.mp3' },
+    { id: 4, title: 'Electronic Beat', artist: 'DJ Beatmaker', albumArt: '/assets/images/electronic-album.jpg', url: '/assets/music/electronic.mp3' },
+    { id: 5, title: 'Pop Hit', artist: 'Pop Star', albumArt: '/assets/images/pop-album.jpg', url: '/assets/music/pop.mp3' },
+    { id: 6, title: 'Instrumental Melody', artist: 'Instrumentalist', albumArt: '/assets/images/instrumental-album.jpg', url: '/assets/music/instrumental.mp3' },
+  ];
+
+  useEffect(() => {
+    if (!currentTrack && tracks.length > 0) {
+      setCurrentTrack(tracks[0]);
+    }
+  }, [tracks, currentTrack]);
+
+  const handleMoodSelect = (mood: string) => {
+    if (currentTrack) {
+      const newEntry: TimelineEntry = {
+        track: currentTrack,
+        mood: mood,
+        timestamp: new Date().getTime(),
+      };
+      const existingTimeline = localStorage.getItem('timeline');
+      const timeline: TimelineEntry[] = existingTimeline ? JSON.parse(existingTimeline) : [];
+      timeline.push(newEntry);
+      localStorage.setItem('timeline', JSON.stringify(timeline));
+    }
+  };
 
   const togglePlay = () => {
-    setIsPlaying(!isPlaying);
-    // TODO: Backend - Connect to actual audio playback API
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
   };
 
   const toggleLike = () => {
     setIsLiked(!isLiked);
-    // TODO: Backend - Connect to like/unlike API
   };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const skipForward = () => {
+    const currentIndex = tracks.findIndex(t => t.id === currentTrack?.id);
+    const nextIndex = (currentIndex + 1) % tracks.length;
+    setCurrentTrack(tracks[nextIndex]);
+  };
+
+  const skipBackward = () => {
+    const currentIndex = tracks.findIndex(t => t.id === currentTrack?.id);
+    const prevIndex = (currentIndex - 1 + tracks.length) % tracks.length;
+    setCurrentTrack(tracks[prevIndex]);
+  };
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play();
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [currentTrack]);
+
 
   useEffect(() => {
     if (location.state && location.state.selectedGenres && location.state.selectedGenres.length > 0) {
@@ -79,6 +164,12 @@ const Dashboard: React.FC = () => {
   const handleSaveGenres = (selectedGenres: string[]) => {
     updatePlaylists(selectedGenres);
     setIsModalOpen(false);
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
   return (
@@ -107,7 +198,7 @@ const Dashboard: React.FC = () => {
               <span className="nav-icon"><MdPerson /></span>
               <span>Profile</span>
             </div>
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => navigate('/timeline')}>
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
             </div>
@@ -165,49 +256,75 @@ const Dashboard: React.FC = () => {
       </main>
 
       {/* Music Player */}
-      {/* TODO: Backend Integration - Connect to audio playback API */}
       <div className="music-player">
+        <audio
+          ref={audioRef}
+          src={currentTrack?.url || ''}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={skipForward}
+        />
         <div className="player-left">
-          {/* TODO: Replace with dynamic album art from currentTrack.albumArt */}
-          <div className="album-art"></div>
+          <div className="album-art">
+            <img src={currentTrack?.albumArt} alt={currentTrack?.title} />
+          </div>
           <div className="song-info-wrapper">
             <div className="song-info">
-              {/* TODO: Replace with currentTrack.title and currentTrack.artist */}
-              <div className="song-title">Song</div>
-              <div className="song-artist">Artist</div>
+              <div className="song-title">{currentTrack?.title || 'Song'}</div>
+              <div className="song-artist">{currentTrack?.artist || 'Artist'}</div>
             </div>
             <div className="player-controls-inline">
-              {/* TODO: Add onClick handlers for: skipToPrevious(), rewind(), fastForward(), skipToNext() */}
-              <button className="control-btn"><MdSkipPrevious size={20} /></button>
-              <button className="control-btn"><MdFastRewind size={20} /></button>
+              <button className="control-btn" onClick={skipBackward}><MdSkipPrevious size={20} /></button>
+              <button className="control-btn" onClick={() => audioRef.current && (audioRef.current.currentTime -= 10)}><MdFastRewind size={20} /></button>
               <button className="control-btn play-main" onClick={togglePlay}>
                 {isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
               </button>
-              <button className="control-btn"><MdFastForward size={20} /></button>
-              <button className="control-btn"><MdSkipNext size={20} /></button>
+              <button className="control-btn" onClick={() => audioRef.current && (audioRef.current.currentTime += 10)}><MdFastForward size={20} /></button>
+              <button className="control-btn" onClick={skipForward}><MdSkipNext size={20} /></button>
             </div>
           </div>
         </div>
 
         <div className="player-center">
           <div className="progress-bar">
-            {/* TODO: Update time-current with formatTime(currentTime) */}
-            <span className="time-current">00:00</span>
-            <div className="progress-track">
-              {/* TODO: Update progress-fill width to (currentTime / duration) * 100% */}
-              <div className="progress-fill"></div>
-            </div>
-            {/* TODO: Update time-total with formatTime(duration) */}
-            <span className="time-total">00:00</span>
+            <span className="time-current">{formatTime(currentTime)}</span>
+            <input
+              type="range"
+              min="0"
+              max={duration}
+              value={currentTime}
+              onChange={(e) => audioRef.current && (audioRef.current.currentTime = Number(e.target.value))}
+              className="progress-track"
+            />
+            <span className="time-total">{formatTime(duration)}</span>
           </div>
         </div>
 
         <div className="player-right">
+          <div className="mood-controls">
+            <button className="mood-btn" onClick={() => handleMoodSelect('Happy')}>😊</button>
+            <button className="mood-btn" onClick={() => handleMoodSelect('Sad')}>😢</button>
+            <button className="mood-btn" onClick={() => handleMoodSelect('Energetic')}>⚡</button>
+            <button className="mood-btn" onClick={() => handleMoodSelect('Calm')}>🧘</button>
+          </div>
           <div className="volume-controls">
-            {/* TODO: Add onClick handlers for: toggleVolume(), toggleShuffle(), toggleRepeat(), openSettings() */}
             <button className="volume-btn"><MdVolumeUp size={18} /></button>
-            <button className="volume-btn"><MdRepeat size={18} /></button>
-            <button className="volume-btn"><MdShuffle size={18} /></button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={(e) => {
+                const newVolume = Number(e.target.value);
+                setVolume(newVolume);
+                if (audioRef.current) {
+                  audioRef.current.volume = newVolume;
+                }
+              }}
+            />
+            <button className={`volume-btn ${isRepeat ? 'active' : ''}`} onClick={() => setIsRepeat(!isRepeat)}><MdRepeat size={18} /></button>
+            <button className={`volume-btn ${isShuffle ? 'active' : ''}`} onClick={() => setIsShuffle(!isShuffle)}><MdShuffle size={18} /></button>
             <button className={`volume-btn ${isLiked ? 'liked' : ''}`} onClick={toggleLike}>
               {isLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
             </button>

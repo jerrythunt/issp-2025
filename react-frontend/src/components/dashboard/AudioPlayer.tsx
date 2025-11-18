@@ -21,7 +21,7 @@ const AudioPlayer: React.FC<Props> = ({ track }) => {
         <div className="audio-player__title">{track?.title ?? 'No song selected'}</div>
         <div className="audio-player__artist">{track?.artist ?? ''}</div>
       </div>
-      <audio ref={audioRef} controls style={{ width: '100%' }}>
+      <audio ref={audioRef} controls style={{ width: '100%' }} aria-label={track?.title ?? 'Audio Player'}>
         {track?.url ? <source src={track.url} type="audio/mpeg" /> : null}
         Your browser does not support the audio element.
       </audio>

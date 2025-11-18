@@ -13,6 +13,7 @@ const PlaylistList: React.FC<Props> = ({ playlists, onSelect }) => {
           key={idx}
           className="playlist-card"
           onClick={() => onSelect?.(name)}
+          onKeyDown={(e) => e.key === 'Enter' && onSelect?.(name)}
           role="button"
           tabIndex={0}
         >
