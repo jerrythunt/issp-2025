@@ -51,10 +51,11 @@ const Login: React.FC<LoginProps> = ({ onForgotPassword, onSignUp }) => {
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <div className="email-field">
-          <label className="field-label">Email</label>
+          <label htmlFor="email" className="field-label">Email</label>
           <div className="input-container">
             <input
               type="email"
+              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input-field"
@@ -64,10 +65,11 @@ const Login: React.FC<LoginProps> = ({ onForgotPassword, onSignUp }) => {
         </div>
 
         <div className="password-field">
-          <label className="field-label">Password</label>
+          <label htmlFor="password" className="field-label">Password</label>
           <div className="input-container">
             <input
               type="password"
+              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input-field"
