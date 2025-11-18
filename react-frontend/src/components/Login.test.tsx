@@ -11,10 +11,17 @@ jest.mock('../firebaseAuth', () => ({
   login: jest.fn(),
 }));
 
+const mockedNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockedNavigate,
+}));
+
 describe('Login', () => {
   beforeEach(() => {
     // Clear mock history before each test
     (login as jest.Mock).mockClear();
+    mockedNavigate.mockClear();
   });
 
   test('renders email and password inputs', () => {
@@ -57,7 +64,41 @@ describe('Login', () => {
     fireEvent.click(screen.getByRole('button', { name: /log in/i }));
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/dashboard');
+      expect(mockedNavigate).toHaveBeenCalledWith('/dashboard');
     });
+  });
+
+  test('shows an error message for invalid email format', async () => {
+    const error = { code: 'auth/invalid-email' };
+    (login as jest.Mock).mockRejectedValueOnce(error);
+
+    render(
+      <BrowserRouter>
+        <Login />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'invalid-email' } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /log in/i }));
+
+    expect(await screen.findByText('Please enter a valid email address.')).toBeInTheDocument();
+  });
+
+  test('shows an error message for invalid credentials', async () => {
+    const error = { code: 'auth/wrong-password' };
+    (login as jest.Mock).mockRejectedValueOnce(error);
+
+    render(
+      <BrowserRouter>
+        <Login />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrongpassword' } });
+    fireEvent.click(screen.getByRole('button', { name: /log in/i }));
+
+    expect(await screen.findByText('Invalid email or password.')).toBeInTheDocument();
   });
 });
