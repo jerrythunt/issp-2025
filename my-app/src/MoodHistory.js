@@ -25,23 +25,23 @@ export default function MoodHistory() {
       const snapshot = await getDocs(historyRef);
 
       const data = snapshot.docs.map((doc) => {
-        const d = doc.data();
+        const d = doc.data() || {};
         return {
           id: doc.id,
           title: d.title || "Unknown Song",
           artist: d.artist || "Unknown Artist",
-          timestamp: typeof d.timestamp === "number" ? d.timestamp : 0,
-          moods: Array.isArray(d.moods) ? d.moods : [], // safe fallback
-          day: d.day || 0,
-          month: d.month || 0,
-          year: d.year || 0,
-          hours: d.hours || 0,
-          minutes: d.minutes || 0,
-          seconds: d.seconds || 0,
+          moods: Array.isArray(d.moods) ? d.moods : [],
+          timestamp: typeof d.timestamp === "number" ? d.timestamp : "N/A",
+          day: typeof d.day === "number" ? d.day : 0,
+          month: typeof d.month === "number" ? d.month : 0,
+          year: typeof d.year === "number" ? d.year : 0,
+          hours: typeof d.hours === "number" ? d.hours : 0,
+          minutes: typeof d.minutes === "number" ? d.minutes : 0,
+          seconds: typeof d.seconds === "number" ? d.seconds : 0,
         };
-      }); // <-- semicolon added here
+      }); // semicolon fixes parsing error
 
-      // sort by date/time
+      // Sort by datetime descending
       data.sort((a, b) => {
         const dateA = new Date(a.year, a.month - 1, a.day, a.hours, a.minutes, a.seconds);
         const dateB = new Date(b.year, b.month - 1, b.day, b.hours, b.minutes, b.seconds);
@@ -75,15 +75,21 @@ export default function MoodHistory() {
             </tr>
           </thead>
           <tbody>
-            {history.map((entry) => (
-              <tr key={entry.id}>
-                <td>{entry.title}</td>
-                <td>{entry.artist}</td>
-                <td>{entry.moods.length > 0 ? entry.moods.join(", ") : "No mood recorded"}</td>
-                <td>{`${entry.year}-${String(entry.month).padStart(2, "0")}-${String(entry.day).padStart(2, "0")} ${String(entry.hours).padStart(2, "0")}:${String(entry.minutes).padStart(2, "0")}:${String(entry.seconds).padStart(2, "0")}`}</td>
-                <td>{entry.timestamp}</td>
-              </tr>
-            ))}
+            {history.map((entry) => {
+              const dateStr = entry.year && entry.month && entry.day
+                ? `${entry.year}-${String(entry.month).padStart(2, "0")}-${String(entry.day).padStart(2, "0")} ${String(entry.hours).padStart(2, "0")}:${String(entry.minutes).padStart(2, "0")}:${String(entry.seconds).padStart(2, "0")}`
+                : "N/A";
+
+              return (
+                <tr key={entry.id}>
+                  <td>{entry.title}</td>
+                  <td>{entry.artist}</td>
+                  <td>{entry.moods.length > 0 ? entry.moods.join(", ") : "N/A"}</td>
+                  <td>{dateStr}</td>
+                  <td>{entry.timestamp !== "N/A" ? entry.timestamp : "N/A"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
