@@ -440,6 +440,23 @@
     grid-template-columns: repeat(auto-fill, 250px);
     gap: 1.5rem;
   }
+
+  .player-controls {
+    gap: 10px;
+    justify-content: space-around;
+  }
+
+  .player-right {
+    gap: 10px;
+  }
+
+  .player-center {
+    padding: 0 10px;
+  }
+
+  .progress-bar {
+    width: 350px;
+  }
 }
 
 @media (max-width: 1200px) {

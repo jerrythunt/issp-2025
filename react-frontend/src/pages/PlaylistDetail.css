@@ -560,6 +560,21 @@
   .song-artist-large {
     font-size: 18px;
   }
+
+  .playlist-detail .player-controls {
+    gap: 10px;
+    justify-content: space-around;
+  }
+
+  .playlist-detail .player-right {
+    gap: 10px;
+  }
+  .playlist-detail .player-center {
+    padding: 0 10px;
+  }
+  .playlist-detail .progress-bar {
+    width: 350px;
+  }
 }
 
 @media (max-width: 1200px) {
@@ -787,4 +802,3 @@
     gap: 1rem;
   }
 }
-

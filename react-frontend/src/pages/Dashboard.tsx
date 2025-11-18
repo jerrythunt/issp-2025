@@ -23,6 +23,7 @@ import PlaylistCard from '../components/PlaylistCard';
 import GenreSelectionModal from '../components/GenreSelectionModal';
 import VolumeControl from '../components/VolumeControl';
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
+import EmojiReaction from '../components/EmojiReaction';
 import { logout } from '../firebaseAuth';
 import { useAudioPlayerContext } from '../context/AudioPlayerContext';
 import { getSongsForGenre, getLikedSongs, isSongLiked, toggleSongLike, formatTime } from '../data/musicLibrary';
@@ -42,15 +43,10 @@ const Dashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Audio Player (from global context)
-  // NOTE: useAudioPlayer hook previously created a per-page audio element.
-  // To maintain persistent playback across navigation we use the global context.
   const audioPlayer = useAudioPlayerContext();
   
-  // Track if current song is liked
   const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
 
-  // Update liked status when current song changes
   useEffect(() => {
     if (audioPlayer.currentSong) {
       setIsCurrentSongLiked(isSongLiked(audioPlayer.currentSong.id));
@@ -84,7 +80,6 @@ const Dashboard: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  // Helper to check if a playlist is currently playing
   const isPlaylistCurrent = (playlistName: string) => {
     return audioPlayer.currentPlaylistSource === playlistName;
   };
@@ -115,9 +110,21 @@ const Dashboard: React.FC = () => {
     localStorage.setItem('playlists', JSON.stringify(updatedPlaylists));
   };
 
+  const handleEmojiSelect = (emoji: string) => {
+    if (audioPlayer.currentSong) {
+      const timelineEntry = {
+        song: audioPlayer.currentSong,
+        emoji,
+        timestamp: new Date().toISOString(),
+        songTimestamp: audioPlayer.currentTime,
+      };
+      const existingTimeline = JSON.parse(localStorage.getItem('timeline') || '[]');
+      localStorage.setItem('timeline', JSON.stringify([...existingTimeline, timelineEntry]));
+    }
+  };
+
   return (
     <div className="dashboard">
-      {/* Sidebar Navigation */}
       <aside className="sidenav">
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
@@ -141,7 +148,7 @@ const Dashboard: React.FC = () => {
               <span className="nav-icon"><MdPerson /></span>
               <span>Profile</span>
             </div>
-            <div className="nav-item" onClick={() => alert('Timeline page coming soon!')} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={() => navigate('/timeline')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
             </div>
@@ -179,10 +186,8 @@ const Dashboard: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="main-content">
         <div className="playlists-grid">
-          {/* Always show a "Liked" playlist first */}
           <PlaylistCard 
             key="liked" 
             playlist={{ name: "Liked", genres: ["Favorites"] }} 
@@ -207,7 +212,6 @@ const Dashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* Music Player */}
       <div className="music-player">
         <div className="player-left">
           <div 
@@ -288,6 +292,7 @@ const Dashboard: React.FC = () => {
 
         <div className="player-right">
           <div className="volume-controls">
+            <EmojiReaction onEmojiSelect={handleEmojiSelect} />
             <VolumeControl
               volume={audioPlayer.volume}
               onVolumeChange={audioPlayer.setVolume}

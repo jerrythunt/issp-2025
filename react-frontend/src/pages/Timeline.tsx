@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdDashboard, 
   MdPerson, 
@@ -15,10 +15,8 @@ import {
   MdPause,
   MdShuffle,
   MdFavoriteBorder,
-  MdMoreHoriz,
   MdFavorite,
-  MdDelete,
-  MdPlayCircleOutline,
+  MdMoreHoriz,
   MdRepeat
 } from 'react-icons/md';
 import VolumeControl from '../components/VolumeControl';
@@ -26,53 +24,33 @@ import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
 import EmojiReaction from '../components/EmojiReaction';
 import { logout } from '../firebaseAuth';
 import { useAudioPlayerContext } from '../context/AudioPlayerContext';
-import { getSongsForGenre, getLikedSongs, isSongLiked, toggleSongLike as toggleSongLikeInLibrary, likeAllSongsInGenre, unlikeAllSongsInGenre, formatTime, Song } from '../data/musicLibrary';
-import './PlaylistDetail.css';
+import { isSongLiked, toggleSongLike, formatTime } from '../data/musicLibrary';
+import './Timeline.css';
 
-const PlaylistDetail: React.FC = () => {
-  const navigate = useNavigate();
-  const { playlistName } = useParams<{ playlistName: string }>();
-  
-  const isLikedPlaylist = playlistName === 'Liked';
-  
-  const getPlaylistLikedState = () => {
-    const likedPlaylists = localStorage.getItem('likedPlaylists');
-    if (likedPlaylists && playlistName) {
-      const parsed = JSON.parse(likedPlaylists);
-      return parsed[playlistName] ?? isLikedPlaylist;
-    }
-    return isLikedPlaylist;
+interface TimelineEntry {
+  song: {
+    id: string;
+    title: string;
+    artist: string;
+    albumArt?: string;
   };
-  
-  const [isPlaylistLiked, setIsPlaylistLiked] = useState(() => getPlaylistLikedState());
-  const [songs, setSongs] = useState<Song[]>([]);
-  
+  emoji: string;
+  timestamp: string;
+  songTimestamp: number;
+}
+
+const Timeline: React.FC = () => {
+  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
+  const navigate = useNavigate();
   const audioPlayer = useAudioPlayerContext();
-  
   const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
 
   useEffect(() => {
-    setIsPlaylistLiked(getPlaylistLikedState());
-  }, [playlistName]);
-
-  useEffect(() => {
-    if (playlistName) {
-      let playlistSongs: Song[];
-      
-      if (isLikedPlaylist) {
-        playlistSongs = getLikedSongs();
-      } else {
-        playlistSongs = getSongsForGenre(playlistName);
-      }
-      
-      setSongs(playlistSongs);
-      audioPlayer.setPlaylist(playlistSongs, playlistName);
-      
-      if (playlistSongs.length > 0 && !audioPlayer.currentSong) {
-        audioPlayer.playSong(playlistSongs[0]);
-      }
+    const storedTimeline = localStorage.getItem('timeline');
+    if (storedTimeline) {
+      setTimelineEntries(JSON.parse(storedTimeline));
     }
-  }, [playlistName]);
+  }, []);
 
   useEffect(() => {
     if (audioPlayer.currentSong) {
@@ -80,39 +58,11 @@ const PlaylistDetail: React.FC = () => {
     }
   }, [audioPlayer.currentSong]);
 
-  const togglePlaylistLike = () => {
-    const newLikedState = !isPlaylistLiked;
-    setIsPlaylistLiked(newLikedState);
-    
-    if (playlistName && !isLikedPlaylist && newLikedState) {
-      likeAllSongsInGenre(playlistName);
-    }
-    
-    if (playlistName) {
-      const likedPlaylists = localStorage.getItem('likedPlaylists');
-      const parsed = likedPlaylists ? JSON.parse(likedPlaylists) : {};
-      parsed[playlistName] = newLikedState;
-      localStorage.setItem('likedPlaylists', JSON.stringify(parsed));
-    }
-  };
-
-  const togglePlayerLike = () => {
+  const toggleLike = () => {
     if (audioPlayer.currentSong) {
-      const newLikedStatus = toggleSongLikeInLibrary(audioPlayer.currentSong.id);
+      const newLikedStatus = toggleSongLike(audioPlayer.currentSong.id);
       setIsCurrentSongLiked(newLikedStatus);
-      
-      if (isLikedPlaylist) {
-        setSongs(getLikedSongs());
-      }
     }
-  };
-
-  const toggleSongLike = (songId: string) => {
-    toggleSongLikeInLibrary(songId);
-    
-    setSongs(songs.map(song => 
-      song.id === songId ? { ...song } : song
-    ));
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -125,11 +75,38 @@ const PlaylistDetail: React.FC = () => {
       };
       const existingTimeline = JSON.parse(localStorage.getItem('timeline') || '[]');
       localStorage.setItem('timeline', JSON.stringify([...existingTimeline, timelineEntry]));
+      setTimelineEntries(prevEntries => [...prevEntries, timelineEntry]);
+    }
+  };
+
+  const formatFullTimestamp = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+    });
+  };
+
+  const getEmojiColorClass = (emoji: string) => {
+    switch (emoji) {
+      case '😊':
+        return 'happy';
+      case '😢':
+        return 'sad';
+      case '⚡':
+        return 'energetic';
+      case '🧘':
+        return 'calm';
+      default:
+        return '';
     }
   };
 
   return (
-    <div className="playlist-detail">
+    <div className="timeline">
       <aside className="sidenav">
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
@@ -153,7 +130,7 @@ const PlaylistDetail: React.FC = () => {
               <span className="nav-icon"><MdPerson /></span>
               <span>Profile</span>
             </div>
-            <div className="nav-item" onClick={() => navigate('/timeline')} style={{ cursor: 'pointer' }}>
+            <div className="nav-item active">
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
             </div>
@@ -186,82 +163,30 @@ const PlaylistDetail: React.FC = () => {
           Change Genre
         </button>
 
-        <div className="version-info">version 5.5.1</div>
+        <div className="version-info">
+          <span>version 5.5.1</span>
+        </div>
       </aside>
 
-      <main className="playlist-content">
-        <div className="playlist-header">
-          <h1 className="playlist-title">{playlistName || 'Playlist Title'}</h1>
-          <div className="playlist-actions">
-            <button 
-              className="play-all-btn"
-              onClick={() => {
-                if (songs.length > 0) {
-                  audioPlayer.playSong(songs[0]);
-                }
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <MdPlayCircleOutline size={48} />
-            </button>
-            <button className={`like-playlist-btn ${isPlaylistLiked ? 'liked' : ''}`} onClick={togglePlaylistLike}>
-              {isPlaylistLiked ? <MdFavorite size={48} /> : <MdFavoriteBorder size={48} />}
-            </button>
-          </div>
-        </div>
-
-        <div className="songs-list">
-          {songs.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
-              {isLikedPlaylist ? 'No liked songs yet. Like some songs to see them here!' : 'No songs available for this genre.'}
-            </div>
-          ) : (
-            songs.map((song) => (
-              <div 
-                key={song.id} 
-                className="song-item"
-                onClick={() => audioPlayer.playSong(song)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div 
-                  className="song-album-art"
-                  style={{ 
-                    backgroundImage: song.albumArt ? `url(${song.albumArt})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center'
-                  }}
-                ></div>
-                <div className="song-details">
-                  <div className="song-title-large">{song.title}</div>
-                  <div className="song-artist-large">{song.artist}</div>
+      <main className="main-content">
+        <h1>Timeline</h1>
+        <div className="timeline-entries">
+          {timelineEntries.length > 0 ? (
+            timelineEntries.map((entry, index) => (
+              <div key={index} className={`timeline-entry ${getEmojiColorClass(entry.emoji)}`}>
+                <div className="timeline-song-info">
+                  <div>
+                    <p className="timeline-song-title">{entry.song.title}</p>
+                    <p className="timeline-song-artist">{entry.song.artist}</p>
+                    <p className="timeline-song-timestamp">{formatTime(entry.songTimestamp)}</p>
+                  </div>
                 </div>
-                <button 
-                  className={`song-action-btn ${isSongLiked(song.id) ? 'liked' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSongLike(song.id);
-                  }}
-                >
-                  {isSongLiked(song.id) ? <MdFavorite size={42} /> : <MdFavoriteBorder size={42} />}
-                </button>
-                <button 
-                  className="song-action-btn delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isLikedPlaylist) {
-                      toggleSongLike(song.id);
-                    } else {
-                      alert('Remove from playlist feature coming soon!');
-                    }
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
-                    <path d="M16 18V30M20 18V30M24 18V30M28 18V30M12 14H30M26 14V12C26 11.4696 25.7893 10.9609 25.4142 10.5858C25.0391 10.2107 24.5304 10 24 10H18C17.4696 10 16.9609 10.2107 16.5858 10.5858C16.2107 10.9609 16 11.4696 16 12V14" stroke="#1D1B20" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
+                <p className="timeline-emoji">{entry.emoji}</p>
+                <p className="timeline-timestamp">{formatFullTimestamp(entry.timestamp)}</p>
               </div>
             ))
+          ) : (
+            <p>No timeline entries yet.</p>
           )}
         </div>
       </main>
@@ -269,7 +194,7 @@ const PlaylistDetail: React.FC = () => {
       <div className="music-player">
         <div className="player-left">
           <div 
-            className="album-art"
+            className="album-art" 
             style={{ 
               backgroundImage: audioPlayer.currentSong?.albumArt ? `url(${audioPlayer.currentSong.albumArt})` : 'none',
               backgroundSize: 'cover',
@@ -278,7 +203,7 @@ const PlaylistDetail: React.FC = () => {
           ></div>
           <div className="song-info">
             <div className="song-title">{audioPlayer.currentSong?.title || 'No Song Playing'}</div>
-            <div className="song-artist">{audioPlayer.currentSong?.artist || 'Select a song'}</div>
+            <div className="song-artist">{audioPlayer.currentSong?.artist || 'Select a playlist'}</div>
           </div>
         </div>
 
@@ -291,7 +216,7 @@ const PlaylistDetail: React.FC = () => {
             <MdSkipPrevious size={20} />
           </button>
           <button 
-            className="control-btn"
+            className="control-btn" 
             onClick={() => audioPlayer.seekTo(Math.max(0, audioPlayer.currentTime - 10))}
             disabled={!audioPlayer.currentSong}
           >
@@ -368,7 +293,7 @@ const PlaylistDetail: React.FC = () => {
             >
               <MdShuffle size={18} />
             </button>
-            <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={togglePlayerLike}>
+            <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={toggleLike}>
               {isCurrentSongLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
             </button>
             <button className="volume-btn"><MdMoreHoriz size={18} /></button>
@@ -379,4 +304,4 @@ const PlaylistDetail: React.FC = () => {
   );
 };
 
-export default PlaylistDetail;
+export default Timeline;
