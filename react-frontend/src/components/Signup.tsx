@@ -8,6 +8,7 @@ const Signup: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    confirmPassword: '',
     birthMonth: '',
     birthDay: '',
     birthYear: '',
@@ -25,6 +26,11 @@ const Signup: React.FC = () => {
   ];
 
   const handleNext = () => {
+    if (step === 2 && formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setError(null);
     setStep(step + 1)
   };
   const handleBack = () => setStep(step - 1);
@@ -124,10 +130,11 @@ const Signup: React.FC = () => {
       case 1:
         return (
           <div className="form-field">
-            <label className="field-label">Email</label>
+            <label htmlFor="email" className="field-label">Email</label>
             <div className="input-container">
               <input
                 type="email"
+                id="email"
                 name="email"
                 placeholder="Enter your email"
                 className="input-field"
@@ -140,20 +147,38 @@ const Signup: React.FC = () => {
         );
       case 2:
         return (
-          <div className="form-field">
-            <label className="field-label">Password</label>
-            <div className="input-container">
-              <input
-                type="password"
-                name="password"
-                placeholder="Create a password"
-                className="input-field"
-                value={formData.password}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-              />
+          <>
+            <div className="form-field">
+              <label htmlFor="password" className="field-label">Password</label>
+              <div className="input-container">
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  placeholder="Create a password"
+                  className="input-field"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                />
+              </div>
             </div>
-          </div>
+            <div className="form-field">
+              <label htmlFor="confirmPassword" className="field-label">Confirm Password</label>
+              <div className="input-container">
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  placeholder="Confirm your password"
+                  className="input-field"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                />
+              </div>
+            </div>
+          </>
         );
       case 3:
         return (
