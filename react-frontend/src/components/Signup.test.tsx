@@ -11,10 +11,17 @@ jest.mock('../firebaseAuth', () => ({
   signUp: jest.fn(),
 }));
 
+const mockedNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockedNavigate,
+}));
+
 describe('Signup', () => {
   beforeEach(() => {
     // Clear mock history before each test
     (signUp as jest.Mock).mockClear();
+    mockedNavigate.mockClear();
   });
 
   test('renders initial step with email input', () => {
@@ -83,7 +90,89 @@ describe('Signup', () => {
     fireEvent.click(signupButton);
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/dashboard');
+      expect(mockedNavigate).toHaveBeenCalledWith('/dashboard', { state: { selectedGenres: [] } });
     });
+  });
+
+  test('shows an error message for email already in use', async () => {
+    const error = { code: 'auth/email-already-in-use' };
+    (signUp as jest.Mock).mockRejectedValueOnce(error);
+
+    render(
+      <BrowserRouter>
+        <Signup />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
+    fireEvent.click(screen.getByText('Next'));
+
+    const passwordInput = await screen.findByLabelText(/^password$/i);
+    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+    const confirmPasswordInput = await screen.findByLabelText(/confirm password/i);
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } });
+    fireEvent.click(screen.getByText('Next'));
+    expect(await screen.findByText('Birthdate')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Next'));
+
+    const agreeCheckbox = await screen.findByLabelText(/i agree to the/i);
+    fireEvent.click(agreeCheckbox);
+    fireEvent.click(screen.getByText('Next'));
+
+    const signupButton = await screen.findByRole('button', { name: /sign up/i });
+    fireEvent.click(signupButton);
+
+    expect(await screen.findByText(/This email address is already in use/)).toBeInTheDocument();
+  });
+
+  test('shows an error message for a weak password', async () => {
+    const error = { code: 'auth/weak-password' };
+    (signUp as jest.Mock).mockRejectedValueOnce(error);
+
+    render(
+      <BrowserRouter>
+        <Signup />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
+    fireEvent.click(screen.getByText('Next'));
+
+    const passwordInput = await screen.findByLabelText(/^password$/i);
+    fireEvent.change(passwordInput, { target: { value: 'weak' } });
+    const confirmPasswordInput = await screen.findByLabelText(/confirm password/i);
+    fireEvent.change(confirmPasswordInput, { target: { value: 'weak' } });
+    fireEvent.click(screen.getByText('Next'));
+
+    expect(await screen.findByText('Birthdate')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Next'));
+
+    const agreeCheckbox = await screen.findByLabelText(/i agree to the/i);
+    fireEvent.click(agreeCheckbox);
+    fireEvent.click(screen.getByText('Next'));
+
+    const signupButton = await screen.findByRole('button', { name: /sign up/i });
+    fireEvent.click(signupButton);
+
+    expect(await screen.findByText(/The password is too weak/)).toBeInTheDocument();
+  });
+
+  test('shows an error message for mismatched passwords', async () => {
+    render(
+      <BrowserRouter>
+        <Signup />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
+    fireEvent.click(screen.getByText('Next'));
+
+    const passwordInput = await screen.findByLabelText(/^password$/i);
+    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+    const confirmPasswordInput = await screen.findByLabelText(/confirm password/i);
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
+    fireEvent.click(screen.getByText('Next'));
+
+    expect(await screen.findByText('Passwords do not match.')).toBeInTheDocument();
   });
 });
