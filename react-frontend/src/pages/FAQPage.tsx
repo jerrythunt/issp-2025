@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MdDashboard, 
-  MdPerson, 
-  MdTimeline, 
-  MdSettings, 
-  MdHelpOutline, 
+import {
+  MdDashboard,
+  MdPerson,
+  MdTimeline,
+  MdSettings,
+  MdHelpOutline,
   MdLogout,
   MdSkipPrevious,
   MdSkipNext,
@@ -19,44 +20,36 @@ import {
   MdMoreHoriz,
   MdRepeat
 } from 'react-icons/md';
-import VolumeControl from '../components/VolumeControl';
-import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
-import EmojiReaction from '../components/EmojiReaction';
+import { usePageTitle } from './hooks/usePageTitle';
 import { logout } from '../firebaseAuth';
 import { useAudioPlayerContext } from '../context/AudioPlayerContext';
 import { isSongLiked, toggleSongLike, formatTime } from '../data/musicLibrary';
-import './Timeline.css';
+import VolumeControl from '../components/VolumeControl';
+import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
+import EmojiReaction from '../components/EmojiReaction';
+import './Dashboard.css';
+import './FAQPage.css';
 
-interface TimelineEntry {
-  song: {
-    id: string;
-    title: string;
-    artist: string;
-    albumArt?: string;
-  };
-  emoji: string;
-  timestamp: string;
-  songTimestamp: number;
-}
+type FAQItem = { q: string; a: string };
 
-const Timeline: React.FC = () => {
-  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
+const FAQPage: React.FC = () => {
+  usePageTitle('FAQs');
   const navigate = useNavigate();
+  const [openSet, setOpenSet] = useState<Set<string>>(new Set());
+
   const audioPlayer = useAudioPlayerContext();
   const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
-
-  useEffect(() => {
-    const storedTimeline = localStorage.getItem('timeline');
-    if (storedTimeline) {
-      setTimelineEntries(JSON.parse(storedTimeline));
-    }
-  }, []);
 
   useEffect(() => {
     if (audioPlayer.currentSong) {
       setIsCurrentSongLiked(isSongLiked(audioPlayer.currentSong.id));
     }
   }, [audioPlayer.currentSong]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   const toggleLike = () => {
     if (audioPlayer.currentSong) {
@@ -75,127 +68,134 @@ const Timeline: React.FC = () => {
       };
       const existingTimeline = JSON.parse(localStorage.getItem('timeline') || '[]');
       localStorage.setItem('timeline', JSON.stringify([...existingTimeline, timelineEntry]));
-      setTimelineEntries(prevEntries => [...prevEntries, timelineEntry]);
     }
   };
 
-  const formatFullTimestamp = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
+  const faqs: { category: string; items: FAQItem[] }[] = [
+    {
+      category: 'Getting Started',
+      items: [
+        { q: 'How do I create an account?', a: 'You can sign up using email/password or Google sign-in from the signup page.' },
+        { q: 'How do I reset my password?', a: 'Use the "Forgot password" link on the login page to request a reset email.' },
+      ],
+    },
+    {
+      category: 'Music & Playlists',
+      items: [
+        { q: 'How do I add songs to a playlist?', a: 'Open a playlist and click the "Add" button next to any song.' },
+        { q: 'What is the "Liked" playlist?', a: 'The "Liked" playlist contains all songs you tap the heart button for.' },
+      ],
+    },
+    {
+      category: 'Account & Settings',
+      items: [
+        { q: 'How do I change my email address?', a: 'Go to Profile → Account Information and use the Edit button to request a change.' },
+        { q: 'How do I delete my account?', a: 'Contact support through the Contact page; we will guide you through verification and deletion.' },
+      ],
+    },
+  ];
+
+  const toggleKey = (key: string) => {
+    setOpenSet(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
   };
 
-  const getEmojiColorClass = (emoji: string) => {
-    switch (emoji) {
-      case '😊':
-        return 'happy';
-      case '😢':
-        return 'sad';
-      case '⚡':
-        return 'energetic';
-      case '🧘':
-        return 'calm';
-      default:
-        return '';
-    }
-  };
-
   return (
-    <div className="timeline">
+    <div className="dashboard">
       <aside className="sidenav">
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <img 
-              src="/assets/images/braintest-logo.png" 
-              alt="BrainTest Music" 
+            <img
+              src="/assets/images/braintest-logo.png"
+              alt="BrainTest Music"
               className="logo-icon"
             />
           </div>
         </div>
-        
         <div className="nav-section">
           <h3 className="nav-section-title">Menu</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={() => navigate('/dashboard')}>
               <span className="nav-icon"><MdDashboard /></span>
               <span>Dashboard</span>
             </div>
-            <div className="nav-item" onClick={() => alert('Profile page coming soon!')} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={() => navigate('/dashboard/profile')}>
               <span className="nav-icon"><MdPerson /></span>
               <span>Profile</span>
             </div>
-            <div className="nav-item active">
+            <div className="nav-item" onClick={() => navigate('/timeline')}>
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
             </div>
           </nav>
         </div>
-
         <div className="nav-section">
           <h3 className="nav-section-title">Help</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item" onClick={() => alert('Settings page coming soon!')} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={() => navigate('/dashboard/settings')}>
               <span className="nav-icon"><MdSettings /></span>
               <span>Settings</span>
             </div>
-            <div className="nav-item" onClick={() => navigate('/dashboard/faq')} style={{ cursor: 'pointer' }}>
+            <div className="nav-item active">
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
             </div>
-            <div className="nav-item" onClick={async () => {
-              await logout();
-              navigate('/');
-            }} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={handleLogout}>
               <span className="nav-icon"><MdLogout /></span>
               <span>Log out</span>
             </div>
           </nav>
         </div>
-
-        <button className="change-genre-btn" onClick={() => navigate('/dashboard')}>
-          Change Genre
-        </button>
-
         <div className="version-info">
           <span>version 5.5.1</span>
         </div>
       </aside>
 
       <main className="main-content">
-        <h1>Timeline</h1>
-        <div className="timeline-entries">
-          {timelineEntries.length > 0 ? (
-            timelineEntries.map((entry, index) => (
-              <div key={index} className={`timeline-entry ${getEmojiColorClass(entry.emoji)}`}>
-                <div className="timeline-song-info">
-                  <div>
-                    <p className="timeline-song-title">{entry.song.title}</p>
-                    <p className="timeline-song-artist">{entry.song.artist}</p>
-                    <p className="timeline-song-timestamp">{formatTime(entry.songTimestamp)}</p>
-                  </div>
-                </div>
-                <p className="timeline-emoji">{entry.emoji}</p>
-                <p className="timeline-timestamp">{formatFullTimestamp(entry.timestamp)}</p>
+        <header className="dashboard-header">
+          <h2>FAQs</h2>
+        </header>
+        <section className="faq-container">
+          {faqs.map(cat => (
+            <div className="faq-category" key={cat.category}>
+              <h3 className="faq-category-title">{cat.category}</h3>
+              <div className="faq-list">
+                {cat.items.map((item, idx) => {
+                  const key = `${cat.category}-${idx}`;
+                  const open = openSet.has(key);
+                  return (
+                    <div className="faq-card" key={key}>
+                      <button
+                        className={`faq-question ${open ? 'open' : ''}`}
+                        aria-expanded={open}
+                        onClick={() => toggleKey(key)}
+                      >
+                        <span>{item.q}</span>
+                        <span className="faq-chevron">{open ? '+' : '−'}</span>
+                      </button>
+                      <div className={`faq-answer ${open ? 'open' : ''}`}>
+                        <p>{item.a}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))
-          ) : (
-            <p>No timeline entries yet.</p>
-          )}
-        </div>
+            </div>
+          ))}
+        </section>
       </main>
 
       <div className="music-player">
         <div className="player-left">
-          <div 
-            className="album-art" 
-            style={{ 
+          <div
+            className="album-art"
+            style={{
               backgroundImage: audioPlayer.currentSong?.albumArt ? `url(${audioPlayer.currentSong.albumArt})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center'
@@ -208,36 +208,36 @@ const Timeline: React.FC = () => {
         </div>
 
         <div className="player-controls-inline">
-          <button 
-            className="control-btn" 
+          <button
+            className="control-btn"
             onClick={audioPlayer.playPrevious}
             disabled={!audioPlayer.currentSong}
           >
             <MdSkipPrevious size={20} />
           </button>
-          <button 
-            className="control-btn" 
+          <button
+            className="control-btn"
             onClick={() => audioPlayer.seekTo(Math.max(0, audioPlayer.currentTime - 10))}
             disabled={!audioPlayer.currentSong}
           >
             <MdFastRewind size={20} />
           </button>
-          <button 
-            className="control-btn play-main" 
+          <button
+            className="control-btn play-main"
             onClick={audioPlayer.togglePlay}
             disabled={!audioPlayer.currentSong}
           >
             {audioPlayer.isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
           </button>
-          <button 
+          <button
             className="control-btn"
             onClick={() => audioPlayer.seekTo(Math.min(audioPlayer.duration, audioPlayer.currentTime + 10))}
             disabled={!audioPlayer.currentSong}
           >
             <MdFastForward size={20} />
           </button>
-          <button 
-            className="control-btn" 
+          <button
+            className="control-btn"
             onClick={audioPlayer.playNext}
             disabled={!audioPlayer.currentSong}
           >
@@ -248,7 +248,7 @@ const Timeline: React.FC = () => {
         <div className="player-center">
           <div className="progress-bar">
             <span className="time-current">{formatTime(audioPlayer.currentTime)}</span>
-            <div 
+            <div
               className="progress-track"
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -258,10 +258,10 @@ const Timeline: React.FC = () => {
               }}
               style={{ cursor: 'pointer' }}
             >
-              <div 
+              <div
                 className="progress-fill"
-                style={{ 
-                  width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%` 
+                style={{
+                  width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%`
                 }}
               ></div>
             </div>
@@ -281,13 +281,13 @@ const Timeline: React.FC = () => {
               speed={audioPlayer.playbackRate}
               onChange={audioPlayer.setPlaybackRate}
             />
-            <button 
+            <button
               className={`volume-btn ${audioPlayer.isRepeat ? 'liked' : ''}`}
               onClick={audioPlayer.toggleRepeat}
             >
               <MdRepeat size={18} />
             </button>
-            <button 
+            <button
               className={`volume-btn ${audioPlayer.isShuffle ? 'liked' : ''}`}
               onClick={audioPlayer.toggleShuffle}
             >
@@ -304,4 +304,4 @@ const Timeline: React.FC = () => {
   );
 };
 
-export default Timeline;
+export default FAQPage;

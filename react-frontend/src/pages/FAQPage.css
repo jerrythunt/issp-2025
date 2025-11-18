@@ -1,0 +1,70 @@
+/* Basic FAQ page styles — minimal and scoped to dashboard layout */
+.faq-container {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto 40px;
+}
+
+.faq-category + .faq-category {
+  margin-top: 20px;
+}
+
+.faq-category-title {
+  font-size: 20px;
+  margin-bottom: 12px;
+  color: var(--text-primary, #222);
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faq-card {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 220ms ease, padding 180ms ease;
+  padding: 0 16px;
+}
+
+.faq-answer.open {
+  max-height: 120px;
+  padding: 12px 16px 16px 16px;
+}
+
+.faq-chevron {
+  margin-left: 16px;
+  font-weight: 700;
+}
+
+/* Ensure the dashboard layout areas remain visible */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+}
+
+.dashboard-sidenav { grid-row: 1 / span 3; }
+.dashboard-main { padding: 20px; }
+.dashboard-player { grid-column: 1 / -1; }

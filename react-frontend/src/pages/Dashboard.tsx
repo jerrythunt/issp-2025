@@ -163,7 +163,7 @@ const Dashboard: React.FC = () => {
               <span className="nav-icon"><MdSettings /></span>
               <span>Settings</span>
             </div>
-            <div className="nav-item" onClick={() => alert('FAQs page coming soon!')} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={() => navigate('/dashboard/faq')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
             </div>
