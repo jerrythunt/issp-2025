@@ -16,6 +16,7 @@ import ContactPage from './pages/ContactPage';
 import FrontPage from './pages/FrontPage';
 import Dashboard from './pages/Dashboard';
 import PlaylistDetail from './pages/PlaylistDetail';
+import { AudioPlayerProvider } from './context/AudioPlayerContext';
 import PrivateRoute from './components/PrivateRoute';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './firebaseConfig';
@@ -64,7 +65,9 @@ function App() {
 
   return (
     <Router>
-      <AppContent />
+      <AudioPlayerProvider>
+        <AppContent />
+      </AudioPlayerProvider>
     </Router>
   );
 }
