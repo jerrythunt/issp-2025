@@ -22,6 +22,7 @@ export default function Header() {
             <button onClick={() => navigate("/landing")}>Home</button>
             <button onClick={() => navigate("/playlists")}>My Playlists</button>
             <button onClick={() => navigate("/preferences")}>My Preferences</button>
+            <button onClick={() => navigate("/moodHistory")}>My Mood Timeline</button>
             <button onClick={handleLogout}>Log Out</button>
           </div>
         )}

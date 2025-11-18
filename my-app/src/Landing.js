@@ -148,21 +148,22 @@ export default function Landing() {
   };
 
   // Save mood (multi-selection)
-  const saveMood = async (selectedMood) => {
+  const saveMood = (selectedMood) => {
     if (!playingSong) return;
+    setMood(prev => prev ? [...new Set([...prev, selectedMood])] : [selectedMood]);
+  };
 
+  const handleConfirmMoodSave = async () => {
+    if (!playingSong || mood.length === 0) return;
     try {
       const now = new Date();
-
-      // update local state for feedback
-      setMood(prev => prev ? [...new Set([...prev, selectedMood])] : [selectedMood]);
-
       const historyRef = collection(db, "users", user.uid, "moodHistory");
+
       await addDoc(historyRef, {
         songId: playingSong.id,
         title: playingSong.title,
         artist: playingSong.artist,
-        moods: [selectedMood],
+        moods: mood,
         timestamp: Math.floor(playerTime),
         listenedAt: now,
         day: now.getDate(),
@@ -172,6 +173,9 @@ export default function Landing() {
         minutes: now.getMinutes(),
         seconds: now.getSeconds()
       });
+
+      setMood([]);
+      setPlayingSong(null);
     } catch (err) {
       console.error(err);
     }
@@ -239,8 +243,6 @@ export default function Landing() {
 
   return (
     <div className="landing-container">
-
-      
       <h1>Welcome, {name}!</h1>
 
       {showPreferences ? (
@@ -274,22 +276,21 @@ export default function Landing() {
                 ))}
               </div>
 
+              {/* Song Modal */}
               {playingSong && (
                 <div className="song-modal">
                   <div className="song-modal-content">
                     <img src={playingSong.artwork} alt={playingSong.title} />
-                    <audio 
-                      ref={audioRef} 
-                      src={playingSong.previewUrl} 
-                      controls 
-                      autoPlay 
-                      style={{ width: "100%" }} 
+                    <audio
+                      ref={audioRef}
+                      src={playingSong.previewUrl}
+                      controls
+                      autoPlay
+                      style={{ width: "100%" }}
                       onTimeUpdate={handleTimeUpdate}
                     />
                     <div className="mood-buttons">
-                      <p>
-                        How are you feeling? {mood.length > 0 && `(Selected: ${mood.join(", ")})`}
-                      </p>
+                      <p>How are you feeling? {mood.length > 0 && `(Selected: ${mood.join(", ")})`}</p>
                       {["Happy","Sad","Excited"].map(m => (
                         <button
                           key={m}
@@ -300,8 +301,11 @@ export default function Landing() {
                         </button>
                       ))}
                     </div>
-                    <button className="add-to-playlist-modal-btn" onClick={() => setShowAddToPlaylistModal(true)}>Add to Playlist</button>
-                    <button className="close-modal" onClick={() => setPlayingSong(null)}>❌</button>
+                    <div className="modal-actions">
+                      <button className="add-to-playlist-modal-btn" onClick={() => setShowAddToPlaylistModal(true)}>Add to Playlist</button>
+                      <button className="save-mood-btn" onClick={handleConfirmMoodSave}>Save Mood</button>
+                      <button className="close-modal" onClick={() => setPlayingSong(null)}>❌</button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -326,11 +330,11 @@ export default function Landing() {
                   </div>
                 </div>
               )}
+
             </>
           )}
         </>
       )}
-
     </div>
   );
 }

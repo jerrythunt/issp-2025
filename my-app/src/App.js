@@ -4,6 +4,7 @@ import Signup from "./Signup";
 import Preferences from "./Preferences";
 import Playlists from "./Playlists";
 import Landing from "./Landing";
+import MoodHistory from "./MoodHistory"
 import ProtectedRoute from "./ProtectedRoute";
 import Header from "./Header"; // import the header
 import { db } from "./firebase";
@@ -35,6 +36,8 @@ export default function App() {
 
           {/* Preferences page */}
           <Route path="/preferences" element={<Preferences />} />
+
+          <Route path="/moodHistory" element={<MoodHistory />} />
 
           {/* Playlists page */}
           <Route path="/playlists" element={<Playlists />} />
