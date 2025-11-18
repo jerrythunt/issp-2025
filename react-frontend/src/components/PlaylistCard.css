@@ -31,7 +31,7 @@
   font-family: 'Inter', sans-serif;
   font-style: normal;
   font-weight: 700;
-  font-size: clamp(24px, 4vw, 48px);
+  font-size: 34px !important;
   line-height: 120%;
   text-align: center;
   letter-spacing: -0.02em;
@@ -109,19 +109,15 @@
   justify-content: center;
   cursor: pointer;
   transition: transform 0.2s ease;
+  color: #000;
 }
 
 .play-button:hover {
   transform: scale(1.15);
 }
 
-.play-icon {
-  width: 0;
-  height: 0;
-  border-left: 18px solid #000;
-  border-top: 11px solid transparent;
-  border-bottom: 11px solid transparent;
-  margin-left: 3px;
+.play-button svg {
+  display: block;
 }
 
 /* Responsive adjustments */

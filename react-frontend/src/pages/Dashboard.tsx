@@ -13,7 +13,6 @@ import {
   MdFastForward,
   MdPlayArrow,
   MdPause,
-  MdVolumeUp,
   MdShuffle,
   MdFavoriteBorder,
   MdFavorite,
@@ -22,7 +21,11 @@ import {
 } from 'react-icons/md';
 import PlaylistCard from '../components/PlaylistCard';
 import GenreSelectionModal from '../components/GenreSelectionModal';
+import VolumeControl from '../components/VolumeControl';
+import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
 import { logout } from '../firebaseAuth';
+import { useAudioPlayerContext } from '../context/AudioPlayerContext';
+import { getSongsForGenre, getLikedSongs, isSongLiked, toggleSongLike, formatTime } from '../data/musicLibrary';
 import './Dashboard.css';
 
 interface Playlist {
@@ -39,25 +42,26 @@ const Dashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Music Player State
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  // Audio Player (from global context)
+  // NOTE: useAudioPlayer hook previously created a per-page audio element.
+  // To maintain persistent playback across navigation we use the global context.
+  const audioPlayer = useAudioPlayerContext();
   
-  // TODO: Backend Integration - Add additional state:
-  // - currentTime: number (in seconds, for progress bar)
-  // - duration: number (total track length in seconds)
-  // - volume: number (0-100)
-  // - currentTrack: { title: string, artist: string, albumArt: string }
-  // - isShuffle: boolean
+  // Track if current song is liked
+  const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
 
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
-    // TODO: Backend - Connect to actual audio playback API
-  };
+  // Update liked status when current song changes
+  useEffect(() => {
+    if (audioPlayer.currentSong) {
+      setIsCurrentSongLiked(isSongLiked(audioPlayer.currentSong.id));
+    }
+  }, [audioPlayer.currentSong]);
 
   const toggleLike = () => {
-    setIsLiked(!isLiked);
-    // TODO: Backend - Connect to like/unlike API
+    if (audioPlayer.currentSong) {
+      const newLikedStatus = toggleSongLike(audioPlayer.currentSong.id);
+      setIsCurrentSongLiked(newLikedStatus);
+    }
   };
 
   useEffect(() => {
@@ -78,6 +82,37 @@ const Dashboard: React.FC = () => {
   const handleSaveGenres = (selectedGenres: string[]) => {
     updatePlaylists(selectedGenres);
     setIsModalOpen(false);
+  };
+
+  // Helper to check if a playlist is currently playing
+  const isPlaylistCurrent = (playlistName: string) => {
+    return audioPlayer.currentPlaylistSource === playlistName;
+  };
+
+  const handlePlayPlaylist = (playlist: Playlist) => {
+    let songs;
+    if (playlist.name === 'Liked') {
+      songs = getLikedSongs();
+    } else {
+      songs = getSongsForGenre(playlist.name);
+    }
+    
+    if (songs.length > 0) {
+      audioPlayer.setPlaylist(songs, playlist.name);
+      audioPlayer.playSong(songs[0]);
+    } else {
+      alert(playlist.name === 'Liked' ? 'No liked songs yet. Like some songs to play them!' : 'No songs available for this playlist.');
+    }
+  };
+
+  const handleDeletePlaylist = (playlistName: string) => {
+    if (playlistName === 'Liked') {
+      alert('Cannot delete the Liked playlist');
+      return;
+    }
+    const updatedPlaylists = playlists.filter(p => p.name !== playlistName);
+    setPlaylists(updatedPlaylists);
+    localStorage.setItem('playlists', JSON.stringify(updatedPlaylists));
   };
 
   return (
@@ -102,11 +137,11 @@ const Dashboard: React.FC = () => {
               <span className="nav-icon"><MdDashboard /></span>
               <span>Dashboard</span>
             </div>
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('Profile page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdPerson /></span>
               <span>Profile</span>
             </div>
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('Timeline page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
             </div>
@@ -117,18 +152,18 @@ const Dashboard: React.FC = () => {
           <h3 className="nav-section-title">Help</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('Settings page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdSettings /></span>
               <span>Settings</span>
             </div>
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('FAQs page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
             </div>
             <div className="nav-item" onClick={async () => {
               await logout();
               navigate('/');
-            }}>
+            }} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdLogout /></span>
               <span>Log out</span>
             </div>
@@ -152,59 +187,130 @@ const Dashboard: React.FC = () => {
             key="liked" 
             playlist={{ name: "Liked", genres: ["Favorites"] }} 
             isLiked={true}
+            onPlay={handlePlayPlaylist}
+            onDelete={handleDeletePlaylist}
+            isPlaying={audioPlayer.isPlaying}
+            isCurrentPlaylist={isPlaylistCurrent("Liked")}
+            onTogglePlay={audioPlayer.togglePlay}
           />
           {playlists.map((playlist, index) => (
-            <PlaylistCard key={index} playlist={playlist} />
+            <PlaylistCard 
+              key={index} 
+              playlist={playlist}
+              onPlay={handlePlayPlaylist}
+              onDelete={handleDeletePlaylist}
+              isPlaying={audioPlayer.isPlaying}
+              isCurrentPlaylist={isPlaylistCurrent(playlist.name)}
+              onTogglePlay={audioPlayer.togglePlay}
+            />
           ))}
         </div>
       </main>
 
       {/* Music Player */}
-      {/* TODO: Backend Integration - Connect to audio playback API */}
       <div className="music-player">
         <div className="player-left">
-          {/* TODO: Replace with dynamic album art from currentTrack.albumArt */}
-          <div className="album-art"></div>
-          <div className="song-info-wrapper">
-            <div className="song-info">
-              {/* TODO: Replace with currentTrack.title and currentTrack.artist */}
-              <div className="song-title">Song</div>
-              <div className="song-artist">Artist</div>
-            </div>
-            <div className="player-controls-inline">
-              {/* TODO: Add onClick handlers for: skipToPrevious(), rewind(), fastForward(), skipToNext() */}
-              <button className="control-btn"><MdSkipPrevious size={20} /></button>
-              <button className="control-btn"><MdFastRewind size={20} /></button>
-              <button className="control-btn play-main" onClick={togglePlay}>
-                {isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
-              </button>
-              <button className="control-btn"><MdFastForward size={20} /></button>
-              <button className="control-btn"><MdSkipNext size={20} /></button>
-            </div>
+          <div 
+            className="album-art" 
+            style={{ 
+              backgroundImage: audioPlayer.currentSong?.albumArt ? `url(${audioPlayer.currentSong.albumArt})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          ></div>
+          <div className="song-info">
+            <div className="song-title">{audioPlayer.currentSong?.title || 'No Song Playing'}</div>
+            <div className="song-artist">{audioPlayer.currentSong?.artist || 'Select a playlist'}</div>
           </div>
+        </div>
+
+        <div className="player-controls-inline">
+          <button 
+            className="control-btn" 
+            onClick={audioPlayer.playPrevious}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdSkipPrevious size={20} />
+          </button>
+          <button 
+            className="control-btn" 
+            onClick={() => audioPlayer.seekTo(Math.max(0, audioPlayer.currentTime - 10))}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdFastRewind size={20} />
+          </button>
+          <button 
+            className="control-btn play-main" 
+            onClick={audioPlayer.togglePlay}
+            disabled={!audioPlayer.currentSong}
+          >
+            {audioPlayer.isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
+          </button>
+          <button 
+            className="control-btn"
+            onClick={() => audioPlayer.seekTo(Math.min(audioPlayer.duration, audioPlayer.currentTime + 10))}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdFastForward size={20} />
+          </button>
+          <button 
+            className="control-btn" 
+            onClick={audioPlayer.playNext}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdSkipNext size={20} />
+          </button>
         </div>
 
         <div className="player-center">
           <div className="progress-bar">
-            {/* TODO: Update time-current with formatTime(currentTime) */}
-            <span className="time-current">00:00</span>
-            <div className="progress-track">
-              {/* TODO: Update progress-fill width to (currentTime / duration) * 100% */}
-              <div className="progress-fill"></div>
+            <span className="time-current">{formatTime(audioPlayer.currentTime)}</span>
+            <div 
+              className="progress-track"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = x / rect.width;
+                audioPlayer.seekTo(percentage * audioPlayer.duration);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <div 
+                className="progress-fill"
+                style={{ 
+                  width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%` 
+                }}
+              ></div>
             </div>
-            {/* TODO: Update time-total with formatTime(duration) */}
-            <span className="time-total">00:00</span>
+            <span className="time-total">{formatTime(audioPlayer.duration)}</span>
           </div>
         </div>
 
         <div className="player-right">
           <div className="volume-controls">
-            {/* TODO: Add onClick handlers for: toggleVolume(), toggleShuffle(), toggleRepeat(), openSettings() */}
-            <button className="volume-btn"><MdVolumeUp size={18} /></button>
-            <button className="volume-btn"><MdRepeat size={18} /></button>
-            <button className="volume-btn"><MdShuffle size={18} /></button>
-            <button className={`volume-btn ${isLiked ? 'liked' : ''}`} onClick={toggleLike}>
-              {isLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
+            <VolumeControl
+              volume={audioPlayer.volume}
+              onVolumeChange={audioPlayer.setVolume}
+              onToggleMute={audioPlayer.toggleMute}
+            />
+            <PlaybackSpeedControl
+              speed={audioPlayer.playbackRate}
+              onChange={audioPlayer.setPlaybackRate}
+            />
+            <button 
+              className={`volume-btn ${audioPlayer.isRepeat ? 'liked' : ''}`}
+              onClick={audioPlayer.toggleRepeat}
+            >
+              <MdRepeat size={18} />
+            </button>
+            <button 
+              className={`volume-btn ${audioPlayer.isShuffle ? 'liked' : ''}`}
+              onClick={audioPlayer.toggleShuffle}
+            >
+              <MdShuffle size={18} />
+            </button>
+            <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={toggleLike}>
+              {isCurrentSongLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
             </button>
             <button className="volume-btn"><MdMoreHoriz size={18} /></button>
           </div>

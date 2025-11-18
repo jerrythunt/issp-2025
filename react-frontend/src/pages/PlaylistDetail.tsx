@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   MdDashboard, 
@@ -13,7 +13,6 @@ import {
   MdFastForward,
   MdPlayArrow,
   MdPause,
-  MdVolumeUp,
   MdShuffle,
   MdFavoriteBorder,
   MdMoreHoriz,
@@ -22,52 +21,109 @@ import {
   MdPlayCircleOutline,
   MdRepeat
 } from 'react-icons/md';
+import VolumeControl from '../components/VolumeControl';
+import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
 import { logout } from '../firebaseAuth';
+import { useAudioPlayerContext } from '../context/AudioPlayerContext';
+import { getSongsForGenre, getLikedSongs, isSongLiked, toggleSongLike as toggleSongLikeInLibrary, likeAllSongsInGenre, unlikeAllSongsInGenre, formatTime, Song } from '../data/musicLibrary';
 import './PlaylistDetail.css';
-
-interface Song {
-  id: number;
-  title: string;
-  artist: string;
-  albumArt?: string;
-  isLiked?: boolean;
-}
 
 const PlaylistDetail: React.FC = () => {
   const navigate = useNavigate();
   const { playlistName } = useParams<{ playlistName: string }>();
-  const [isPlaying, setIsPlaying] = useState(false);
   
   // Check if this is the "Liked" playlist
   const isLikedPlaylist = playlistName === 'Liked';
   
-  const [isPlaylistLiked, setIsPlaylistLiked] = useState(isLikedPlaylist);
-  const [isPlayerLiked, setIsPlayerLiked] = useState(false);
-
-  // Mock data - replace with actual data from backend
-  // If it's the Liked playlist, all songs should be liked by default
-  const [songs, setSongs] = useState<Song[]>([
-    { id: 1, title: 'Title', artist: 'Artist', isLiked: isLikedPlaylist },
-    { id: 2, title: 'Title', artist: 'Artist', isLiked: isLikedPlaylist },
-    { id: 3, title: 'Title', artist: 'Artist', isLiked: isLikedPlaylist },
-    { id: 4, title: 'Title', artist: 'Artist', isLiked: isLikedPlaylist },
-  ]);
-
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
+  // Load playlist liked state from localStorage
+  const getPlaylistLikedState = () => {
+    const likedPlaylists = localStorage.getItem('likedPlaylists');
+    if (likedPlaylists && playlistName) {
+      const parsed = JSON.parse(likedPlaylists);
+      return parsed[playlistName] ?? isLikedPlaylist;
+    }
+    return isLikedPlaylist;
   };
+  
+  const [isPlaylistLiked, setIsPlaylistLiked] = useState(() => getPlaylistLikedState());
+  const [songs, setSongs] = useState<Song[]>([]);
+  
+  // Audio Player (global context)
+  const audioPlayer = useAudioPlayerContext();
+  
+  // Track if current song is liked
+  const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
+
+  // Load playlist liked state from localStorage when playlist changes
+  useEffect(() => {
+    setIsPlaylistLiked(getPlaylistLikedState());
+  }, [playlistName]);
+
+  // Load songs for this playlist
+  useEffect(() => {
+    if (playlistName) {
+      let playlistSongs: Song[];
+      
+      if (isLikedPlaylist) {
+        playlistSongs = getLikedSongs();
+      } else {
+        playlistSongs = getSongsForGenre(playlistName);
+      }
+      
+      setSongs(playlistSongs);
+      audioPlayer.setPlaylist(playlistSongs, playlistName);
+      
+      // Auto-play first song if available
+      if (playlistSongs.length > 0 && !audioPlayer.currentSong) {
+        audioPlayer.playSong(playlistSongs[0]);
+      }
+    }
+  }, [playlistName]);
+
+  // Update liked status when current song changes
+  useEffect(() => {
+    if (audioPlayer.currentSong) {
+      setIsCurrentSongLiked(isSongLiked(audioPlayer.currentSong.id));
+    }
+  }, [audioPlayer.currentSong]);
 
   const togglePlaylistLike = () => {
-    setIsPlaylistLiked(!isPlaylistLiked);
+    const newLikedState = !isPlaylistLiked;
+    setIsPlaylistLiked(newLikedState);
+    
+    // Only like all songs when clicking to like the playlist
+    // When unliking the playlist, don't affect individual song likes
+    if (playlistName && !isLikedPlaylist && newLikedState) {
+      likeAllSongsInGenre(playlistName);
+    }
+    
+    // Persist playlist liked state to localStorage
+    if (playlistName) {
+      const likedPlaylists = localStorage.getItem('likedPlaylists');
+      const parsed = likedPlaylists ? JSON.parse(likedPlaylists) : {};
+      parsed[playlistName] = newLikedState;
+      localStorage.setItem('likedPlaylists', JSON.stringify(parsed));
+    }
   };
 
   const togglePlayerLike = () => {
-    setIsPlayerLiked(!isPlayerLiked);
+    if (audioPlayer.currentSong) {
+      const newLikedStatus = toggleSongLikeInLibrary(audioPlayer.currentSong.id);
+      setIsCurrentSongLiked(newLikedStatus);
+      
+      // Refresh songs if in Liked playlist
+      if (isLikedPlaylist) {
+        setSongs(getLikedSongs());
+      }
+    }
   };
 
-  const toggleSongLike = (songId: number) => {
+  const toggleSongLike = (songId: string) => {
+    const newLikedStatus = toggleSongLikeInLibrary(songId);
+    
+    // Update local state
     setSongs(songs.map(song => 
-      song.id === songId ? { ...song, isLiked: !song.isLiked } : song
+      song.id === songId ? { ...song } : song
     ));
   };
 
@@ -89,15 +145,15 @@ const PlaylistDetail: React.FC = () => {
           <h3 className="nav-section-title">Menu</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item" onClick={() => navigate('/dashboard')}>
+            <div className="nav-item" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdDashboard /></span>
               <span>Dashboard</span>
             </div>
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('Profile page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdPerson /></span>
               <span>Profile</span>
             </div>
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('Timeline page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
             </div>
@@ -108,18 +164,18 @@ const PlaylistDetail: React.FC = () => {
           <h3 className="nav-section-title">Help</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('Settings page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdSettings /></span>
               <span>Settings</span>
             </div>
-            <div className="nav-item">
+            <div className="nav-item" onClick={() => alert('FAQs page coming soon!')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
             </div>
             <div className="nav-item" onClick={async () => {
               await logout();
               navigate('/');
-            }}>
+            }} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdLogout /></span>
               <span>Log out</span>
             </div>
@@ -139,7 +195,15 @@ const PlaylistDetail: React.FC = () => {
         <div className="playlist-header">
           <h1 className="playlist-title">{playlistName || 'Playlist Title'}</h1>
           <div className="playlist-actions">
-            <button className="play-all-btn">
+            <button 
+              className="play-all-btn"
+              onClick={() => {
+                if (songs.length > 0) {
+                  audioPlayer.playSong(songs[0]);
+                }
+              }}
+              style={{ cursor: 'pointer' }}
+            >
               <MdPlayCircleOutline size={48} />
             </button>
             <button className={`like-playlist-btn ${isPlaylistLiked ? 'liked' : ''}`} onClick={togglePlaylistLike}>
@@ -150,67 +214,166 @@ const PlaylistDetail: React.FC = () => {
 
         {/* Songs List */}
         <div className="songs-list">
-          {songs.map((song) => (
-            <div key={song.id} className="song-item">
-              <div className="song-album-art"></div>
-              <div className="song-details">
-                <div className="song-title-large">{song.title}</div>
-                <div className="song-artist-large">{song.artist}</div>
-              </div>
-              <button 
-                className={`song-action-btn ${song.isLiked ? 'liked' : ''}`}
-                onClick={() => toggleSongLike(song.id)}
-              >
-                {song.isLiked ? <MdFavorite size={42} /> : <MdFavoriteBorder size={42} />}
-              </button>
-              <button className="song-action-btn delete-btn">
-                <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
-                  <path d="M16 18V30M20 18V30M24 18V30M28 18V30M12 14H30M26 14V12C26 11.4696 25.7893 10.9609 25.4142 10.5858C25.0391 10.2107 24.5304 10 24 10H18C17.4696 10 16.9609 10.2107 16.5858 10.5858C16.2107 10.9609 16 11.4696 16 12V14" stroke="#1D1B20" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+          {songs.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+              {isLikedPlaylist ? 'No liked songs yet. Like some songs to see them here!' : 'No songs available for this genre.'}
             </div>
-          ))}
+          ) : (
+            songs.map((song) => (
+              <div 
+                key={song.id} 
+                className="song-item"
+                onClick={() => audioPlayer.playSong(song)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div 
+                  className="song-album-art"
+                  style={{ 
+                    backgroundImage: song.albumArt ? `url(${song.albumArt})` : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                ></div>
+                <div className="song-details">
+                  <div className="song-title-large">{song.title}</div>
+                  <div className="song-artist-large">{song.artist}</div>
+                </div>
+                <button 
+                  className={`song-action-btn ${isSongLiked(song.id) ? 'liked' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSongLike(song.id);
+                  }}
+                >
+                  {isSongLiked(song.id) ? <MdFavorite size={42} /> : <MdFavoriteBorder size={42} />}
+                </button>
+                <button 
+                  className="song-action-btn delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isLikedPlaylist) {
+                      // For Liked playlist, use the like toggle to remove
+                      toggleSongLike(song.id);
+                    } else {
+                      alert('Remove from playlist feature coming soon!');
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+                    <path d="M16 18V30M20 18V30M24 18V30M28 18V30M12 14H30M26 14V12C26 11.4696 25.7893 10.9609 25.4142 10.5858C25.0391 10.2107 24.5304 10 24 10H18C17.4696 10 16.9609 10.2107 16.5858 10.5858C16.2107 10.9609 16 11.4696 16 12V14" stroke="#1D1B20" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </main>
 
       {/* Music Player */}
       <div className="music-player">
         <div className="player-left">
-          <div className="album-art"></div>
-          <div className="song-info-wrapper">
-            <div className="song-info">
-              <div className="song-title">Song</div>
-              <div className="song-artist">Artist</div>
-            </div>
-            <div className="player-controls-inline">
-              <button className="control-btn"><MdSkipPrevious size={20} /></button>
-              <button className="control-btn"><MdFastRewind size={20} /></button>
-              <button className="control-btn play-main" onClick={togglePlay}>
-                {isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
-              </button>
-              <button className="control-btn"><MdFastForward size={20} /></button>
-              <button className="control-btn"><MdSkipNext size={20} /></button>
-            </div>
+          <div 
+            className="album-art"
+            style={{ 
+              backgroundImage: audioPlayer.currentSong?.albumArt ? `url(${audioPlayer.currentSong.albumArt})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          ></div>
+          <div className="song-info">
+            <div className="song-title">{audioPlayer.currentSong?.title || 'No Song Playing'}</div>
+            <div className="song-artist">{audioPlayer.currentSong?.artist || 'Select a song'}</div>
           </div>
+        </div>
+
+        <div className="player-controls-inline">
+          <button 
+            className="control-btn" 
+            onClick={audioPlayer.playPrevious}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdSkipPrevious size={20} />
+          </button>
+          <button 
+            className="control-btn"
+            onClick={() => audioPlayer.seekTo(Math.max(0, audioPlayer.currentTime - 10))}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdFastRewind size={20} />
+          </button>
+          <button 
+            className="control-btn play-main" 
+            onClick={audioPlayer.togglePlay}
+            disabled={!audioPlayer.currentSong}
+          >
+            {audioPlayer.isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
+          </button>
+          <button 
+            className="control-btn"
+            onClick={() => audioPlayer.seekTo(Math.min(audioPlayer.duration, audioPlayer.currentTime + 10))}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdFastForward size={20} />
+          </button>
+          <button 
+            className="control-btn" 
+            onClick={audioPlayer.playNext}
+            disabled={!audioPlayer.currentSong}
+          >
+            <MdSkipNext size={20} />
+          </button>
         </div>
 
         <div className="player-center">
           <div className="progress-bar">
-            <span className="time-current">00:00</span>
-            <div className="progress-track">
-              <div className="progress-fill"></div>
+            <span className="time-current">{formatTime(audioPlayer.currentTime)}</span>
+            <div 
+              className="progress-track"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = x / rect.width;
+                audioPlayer.seekTo(percentage * audioPlayer.duration);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <div 
+                className="progress-fill"
+                style={{ 
+                  width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%` 
+                }}
+              ></div>
             </div>
-            <span className="time-total">00:00</span>
+            <span className="time-total">{formatTime(audioPlayer.duration)}</span>
           </div>
         </div>
 
         <div className="player-right">
           <div className="volume-controls">
-            <button className="volume-btn"><MdVolumeUp size={18} /></button>
-            <button className="volume-btn"><MdRepeat size={18} /></button>
-            <button className="volume-btn"><MdShuffle size={18} /></button>
-            <button className={`volume-btn ${isPlayerLiked ? 'liked' : ''}`} onClick={togglePlayerLike}>
-              {isPlayerLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
+            <VolumeControl
+              volume={audioPlayer.volume}
+              onVolumeChange={audioPlayer.setVolume}
+              onToggleMute={audioPlayer.toggleMute}
+            />
+            <PlaybackSpeedControl
+              speed={audioPlayer.playbackRate}
+              onChange={audioPlayer.setPlaybackRate}
+            />
+            <button 
+              className={`volume-btn ${audioPlayer.isRepeat ? 'liked' : ''}`}
+              onClick={audioPlayer.toggleRepeat}
+            >
+              <MdRepeat size={18} />
+            </button>
+            <button 
+              className={`volume-btn ${audioPlayer.isShuffle ? 'liked' : ''}`}
+              onClick={audioPlayer.toggleShuffle}
+            >
+              <MdShuffle size={18} />
+            </button>
+            <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={togglePlayerLike}>
+              {isCurrentSongLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
             </button>
             <button className="volume-btn"><MdMoreHoriz size={18} /></button>
           </div>
