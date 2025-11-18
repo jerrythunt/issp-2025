@@ -16,6 +16,7 @@ import ContactPage from './pages/ContactPage';
 import FrontPage from './pages/FrontPage';
 import Dashboard from './pages/Dashboard';
 import PlaylistDetail from './pages/PlaylistDetail';
+import Timeline from './pages/Timeline';
 import { AudioPlayerProvider } from './context/AudioPlayerContext';
 import PrivateRoute from './components/PrivateRoute';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -23,7 +24,7 @@ import { auth } from './firebaseConfig';
 
 function AppContent() {
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard' || location.pathname.startsWith('/playlist/');
+  const isDashboard = location.pathname === '/dashboard' || location.pathname.startsWith('/playlist/') || location.pathname === '/timeline';
 
   return (
     <div className="App">
@@ -41,6 +42,7 @@ function AppContent() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/playlist/:playlistName" element={<PrivateRoute><PlaylistDetail /></PrivateRoute>} />
+        <Route path="/timeline" element={<PrivateRoute><Timeline /></PrivateRoute>} />
       </Routes>
       {!isDashboard && <Footer />}
     </div>
