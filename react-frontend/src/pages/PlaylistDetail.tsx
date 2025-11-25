@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react'; // Removed useRef
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  MdDashboard, 
-  MdTimeline, 
-  MdSettings, 
-  MdHelpOutline, 
+import {
+  MdDashboard,
+  MdTimeline,
+  MdSettings,
+  MdHelpOutline,
   MdLogout,
   MdPlayArrow,
   MdPause,
@@ -12,7 +12,10 @@ import {
   MdSkipNext,
   MdSkipPrevious,
   MdFavorite,
-  MdFavoriteBorder
+  MdFavoriteBorder,
+  MdMoreHoriz, // Added for consistency with dashboard player UI
+  MdRepeat, // Added MdRepeat
+  MdShuffle, // Added MdShuffle
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
@@ -21,15 +24,8 @@ import AudioVisualizer from '../components/AudioVisualizer';
 import VolumeControl from '../components/VolumeControl';
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
 import './PlaylistDetail.css';
-
-interface Song {
-  id: number;
-  title: string;
-  artist: string;
-  artwork: string;
-  genre: string;
-  previewUrl: string;
-}
+import { Song } from '../data/musicLibrary'; // Import Song interface from musicLibrary
+import { useAudioPlayerContext } from '../context/AudioPlayerContext'; // Import AudioPlayerContext
 
 interface Playlist {
   id: string;
@@ -44,7 +40,7 @@ const fetchSongsByGenre = async (genre: string): Promise<Song[]> => {
       `https://itunes.apple.com/search?term=${encodeURIComponent(genre + " music")}&media=music&entity=song&limit=50`
     );
     const data = await response.json();
-    
+
     if (!data.results) return [];
 
     return data.results
@@ -70,13 +66,34 @@ const PlaylistDetail: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.7);
-  const [isMuted, setIsMuted] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [likedSongs, setLikedSongs] = useState<number[]>([]);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  // const audioRef = useRef<HTMLAudioElement>(null); // Removed local audioRef
+
+  // Use AudioPlayerContext
+  const {
+    currentSong,
+    isPlaying,
+    playerTime,
+    playerDuration,
+    volume,
+    playbackRate,
+    isRepeat,
+    isShuffle,
+    currentPlaylist: contextCurrentPlaylist, // Renamed to avoid clash with local playlist state
+    audioRef, // Access audioRef (HTMLAudioElement) from context
+    playSong,
+    togglePlay,
+    playNext,
+    playPrevious,
+    seekTo,
+    setVolume,
+    toggleMute,
+    setPlaybackRate,
+    toggleShuffle,
+    toggleRepeat,
+    setPlaylist: setAudioPlayerPlaylist, // Renamed to avoid clash with local setPlaylist state
+  } = useAudioPlayerContext();
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -93,7 +110,7 @@ const PlaylistDetail: React.FC = () => {
         } catch (err) {
           console.error('Failed to load liked songs:', err);
         }
-        
+
         fetchPlaylist(playlistName);
       } else {
         setLoading(false);
@@ -102,17 +119,20 @@ const PlaylistDetail: React.FC = () => {
 
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playlistName]);
+  }, [playlistName]); // Removed user from deps as it's handled by onAuthStateChanged
+
 
   const fetchPlaylist = async (name: string) => {
     setLoading(true);
     try {
       const decodedName = decodeURIComponent(name);
       console.log('Fetching playlist:', decodedName);
-      
+
+      let fetchedPlaylist: Playlist | null = null;
+
       // Check if this is the "Liked Songs" playlist
       if (decodedName === "Liked Songs") {
-        if (!user) {
+        if (!user) { // user state might not be immediately available here on first render
           console.log('No user found for Liked Songs');
           setLoading(false);
           return;
@@ -142,25 +162,31 @@ const PlaylistDetail: React.FC = () => {
             const bTime = bData?.likedAt ? new Date(bData.likedAt).getTime() : 0;
             return bTime - aTime; // Most recent first
           });
-        
+
         console.log('Setting liked songs playlist with', likedSongsData.length, 'songs');
-        setPlaylist({
+        fetchedPlaylist = {
           id: 'liked-songs',
           name: 'Liked Songs',
           songs: likedSongsData
-        });
-        setLoading(false);
-        return;
+        };
+
       } else {
         // Fetch songs for this genre
         const songs = await fetchSongsByGenre(decodedName);
-        
-        setPlaylist({
+
+        fetchedPlaylist = {
           id: decodedName,
           name: decodedName,
           songs: songs
-        });
+        };
       }
+
+      setPlaylist(fetchedPlaylist);
+      if (fetchedPlaylist && fetchedPlaylist.songs.length > 0) {
+        setAudioPlayerPlaylist(fetchedPlaylist.songs); // Update central audio player's playlist
+      }
+
+
     } catch (err) {
       console.error("Failed to fetch playlist:", err);
     } finally {
@@ -168,50 +194,26 @@ const PlaylistDetail: React.FC = () => {
     }
   };
 
-  const playSong = (song: Song) => {
-    setCurrentSong(song);
-    setIsPlaying(true);
+  // Helper to format time for display
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const togglePlayPause = () => {
-    if (!audioRef.current) return;
-    
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
-  };
-
-  const playNext = () => {
-    if (!playlist || !currentSong) return;
-    const currentIndex = playlist.songs.findIndex(s => s.id === currentSong.id);
-    if (currentIndex < playlist.songs.length - 1) {
-      playSong(playlist.songs[currentIndex + 1]);
-    }
-  };
-
-  const playPrevious = () => {
-    if (!playlist || !currentSong) return;
-    const currentIndex = playlist.songs.findIndex(s => s.id === currentSong.id);
-    if (currentIndex > 0) {
-      playSong(playlist.songs[currentIndex - 1]);
-    }
-  };
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
+  // Centralized function to handle playing a song and setting the playlist
+  const handlePlaySong = (song: Song, songsList: Song[]) => {
+    setAudioPlayerPlaylist(songsList); // First, set the entire playlist in the context
+    playSong(song, songsList); // Then, play the specific song within that context
   };
 
   const toggleLike = async (song: Song) => {
     if (!user) return;
-    
+
     try {
       const userRef = doc(db, 'users', user.uid);
       const likedSongsRef = collection(userRef, 'likedSongs');
-      
+
       if (likedSongs.includes(song.id)) {
         // Unlike: remove from state
         setLikedSongs(likedSongs.filter(id => id !== song.id));
@@ -249,31 +251,6 @@ const PlaylistDetail: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackSpeed;
-    }
-  }, [playbackSpeed]);
-
-  useEffect(() => {
-    if (currentSong && audioRef.current) {
-      audioRef.current.src = currentSong.previewUrl;
-      if (isPlaying) {
-        audioRef.current.play().catch(err => {
-          console.error("Audio playback error:", err);
-          setIsPlaying(false);
-        });
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSong]);
-
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/');
@@ -298,19 +275,21 @@ const PlaylistDetail: React.FC = () => {
     );
   }
 
+  const isCurrentSongLiked = currentSong && likedSongs.includes(currentSong.id);
+
   return (
     <div className="playlist-detail">
       <aside className="sidenav">
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <img 
-              src="/assets/images/braintest-logo.png" 
-              alt="BrainTest Music" 
+            <img
+              src="/assets/images/braintest-logo.png"
+              alt="BrainTest Music"
               className="logo-icon"
             />
           </div>
         </div>
-        
+
         <div className="nav-section">
           <h3 className="nav-section-title">Menu</h3>
           <div className="nav-divider"></div>
@@ -350,7 +329,7 @@ const PlaylistDetail: React.FC = () => {
 
       <main className="playlist-content">
         <div className="playlist-header">
-          <button 
+          <button
             className="back-btn"
             onClick={() => navigate('/dashboard')}
             style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
@@ -371,33 +350,37 @@ const PlaylistDetail: React.FC = () => {
           ) : (
             <div className="playlists-grid">
               {playlist.songs.map((song) => (
-                <div 
-                  key={song.id} 
+                <div
+                  key={song.id}
                   className="playlist-card song-card"
                 >
-                  <div className="song-card-image-wrapper" onClick={() => playSong(song)}>
-                    <img 
+                  <div className="song-card-image-wrapper" onClick={() => handlePlaySong(song, playlist.songs)}>
+                    <img
                       src={song.artwork}
                       alt={song.title}
                       className="song-card-image"
                     />
                     <div className="song-card-play-overlay">
-                      <MdPlayArrow color="#fff" size={32} />
+                      {currentSong?.id === song.id && isPlaying ? (
+                        <MdPause color="#fff" size={32} />
+                      ) : (
+                        <MdPlayArrow color="#fff" size={32} />
+                      )}
                     </div>
                   </div>
                   <div className="song-card-info">
                     <h4 className="song-card-title">{song.title}</h4>
                     <p className="song-card-artist">{song.artist}</p>
                     <p className="song-card-genre">{song.genre}</p>
-                    <button 
+                    <button
                       className="song-like-btn"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleLike(song);
                       }}
                     >
-                      {likedSongs.includes(song.id) ? 
-                        <MdFavorite size={20} color="#ED6F3A" /> : 
+                      {likedSongs.includes(song.id) ?
+                        <MdFavorite size={20} color="#ED6F3A" /> :
                         <MdFavoriteBorder size={20} color="#666" />
                       }
                     </button>
@@ -409,19 +392,18 @@ const PlaylistDetail: React.FC = () => {
         </div>
       </main>
 
-      {/* Music Player */}
+      {/* Music Player UI (uses currentSong from context) */}
       {currentSong && (
         <div className="music-player">
           <div className="player-left">
             <div className="player-album-art-container">
-              <img 
-                src={currentSong.artwork} 
+              <img
+                src={currentSong.artwork}
                 alt={currentSong.title}
                 className="player-album-art"
               />
-              <AudioVisualizer 
-                audioElement={audioRef.current} 
-                isPlaying={isPlaying} 
+              <AudioVisualizer
+                isPlaying={isPlaying}
               />
             </div>
             <div className="player-song-info">
@@ -431,23 +413,23 @@ const PlaylistDetail: React.FC = () => {
           </div>
 
           <div className="player-controls-inline">
-            <button 
-              className="control-btn" 
+            <button
+              className="control-btn"
               onClick={playPrevious}
-              disabled={!playlist || playlist.songs.findIndex(s => s.id === currentSong.id) === 0}
+              disabled={contextCurrentPlaylist.length === 0} // Use context's playlist
             >
               <MdSkipPrevious size={20} />
             </button>
-            <button 
-              className="control-btn control-btn-play" 
-              onClick={togglePlayPause}
+            <button
+              className="control-btn control-btn-play"
+              onClick={togglePlay} // Use context's togglePlay
             >
               {isPlaying ? <MdPause size={24} /> : <MdPlayArrow size={24} />}
             </button>
-            <button 
-              className="control-btn" 
+            <button
+              className="control-btn"
               onClick={playNext}
-              disabled={!playlist || playlist.songs.findIndex(s => s.id === currentSong.id) === playlist.songs.length - 1}
+              disabled={contextCurrentPlaylist.length === 0} // Use context's playlist
             >
               <MdSkipNext size={20} />
             </button>
@@ -455,11 +437,25 @@ const PlaylistDetail: React.FC = () => {
 
           <div className="player-center">
             <div className="progress-bar">
-              <span className="time-current">0:00</span>
-              <div className="progress-track">
-                <div className="progress-fill" style={{ width: '0%' }}></div>
+              <span className="time-current">{formatTime(playerTime)}</span>
+              <div
+                className="progress-track"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const percentage = x / rect.width;
+                  seekTo(percentage * playerDuration);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${playerDuration > 0 ? (playerTime / playerDuration) * 100 : 0}%`
+                  }}
+                ></div>
               </div>
-              <span className="time-total">0:30</span>
+              <span className="time-total">{formatTime(playerDuration)}</span>
             </div>
           </div>
 
@@ -467,26 +463,42 @@ const PlaylistDetail: React.FC = () => {
             <div className="volume-controls">
               <VolumeControl
                 volume={volume}
-                onVolumeChange={setVolume}
-                onToggleMute={toggleMute}
+                onVolumeChange={setVolume} // Use context's setVolume
+                onToggleMute={toggleMute} // Use context's toggleMute
               />
               <PlaybackSpeedControl
-                speed={playbackSpeed}
-                onChange={setPlaybackSpeed}
+                speed={playbackRate}
+                onChange={setPlaybackRate} // Use context's setPlaybackRate
               />
+              <button
+                className={`volume-btn ${isRepeat ? 'liked' : ''}`}
+                onClick={toggleRepeat} // Use context's toggleRepeat
+              >
+                <MdRepeat size={18} />
+              </button>
+              <button
+                className={`volume-btn ${isShuffle ? 'liked' : ''}`}
+                onClick={toggleShuffle} // Use context's toggleShuffle
+              >
+                <MdShuffle size={18} />
+              </button>
+              <button
+                className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`}
+                onClick={() => currentSong && toggleLike(currentSong)} // Pass currentSong for consistent behavior
+                title="Like song"
+              >
+                {isCurrentSongLiked ?
+                  <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />
+                }
+              </button>
+              {/* Add MoreHoriz button if needed for consistency */}
+              <button className="volume-btn">
+                 <MdMoreHoriz size={18} />
+              </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Audio Element */}
-      <audio 
-        ref={audioRef}
-        style={{ display: 'none' }}
-        crossOrigin="anonymous"
-        preload="auto"
-        onEnded={playNext}
-      />
     </div>
   );
 };

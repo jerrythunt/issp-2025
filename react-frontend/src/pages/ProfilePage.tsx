@@ -1,17 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MdDashboard, 
-  MdTimeline, 
-  MdSettings, 
-  MdHelpOutline, 
+import {
+  MdDashboard,
+  MdTimeline,
+  MdSettings,
+  MdHelpOutline,
   MdLogout,
-  MdPerson
+  MdPerson,
+  MdPlayArrow, // Added for audio player
+  MdPause,    // Added for audio player
+  MdSkipNext,   // Added for audio player
+  MdSkipPrevious, // Added for audio player
+  MdFavorite,   // Added for audio player
+  MdFavoriteBorder, // Added for audio player
+  MdRepeat,     // Added for audio player
+  MdShuffle,    // Added for audio player
+  MdMoreHoriz   // Added for audio player
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, updateDoc } from 'firebase/firestore'; // Added collection, addDoc, getDocs, updateDoc
 import './ProfilePage.css';
+import { useAudioPlayerContext } from '../context/AudioPlayerContext'; // Added for audio player
+import AudioVisualizer from '../components/AudioVisualizer'; // Added for audio player
+import VolumeControl from '../components/VolumeControl'; // Added for audio player
+import PlaybackSpeedControl from '../components/PlaybackSpeedControl'; // Added for audio player
+import EmojiReaction from '../components/EmojiReaction'; // Added for audio player
+import { Song } from '../data/musicLibrary'; // Added for toggleLike function
 
 const BACKEND_URL = 'http://localhost:8888/api/music';
 const GENRES = [
@@ -36,6 +51,35 @@ const ProfilePage: React.FC = () => {
   const [editingPhone, setEditingPhone] = useState(false);
   const [showGenreModal, setShowGenreModal] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false); // Added for consistency with dashboard player
+  const [songToAdd, setSongToAdd] = useState<Song | null>(null); // Added for consistency with dashboard player
+  const [newPlaylistNameModal, setNewPlaylistNameModal] = useState(""); // Added for consistency with dashboard player
+  const [likedSongs, setLikedSongs] = useState<number[]>([]); // Added for audio player liked status
+
+  // Use AudioPlayerContext
+  const {
+    currentSong,
+    isPlaying,
+    playerTime,
+    playerDuration,
+    volume,
+    playbackRate,
+    isRepeat,
+    isShuffle,
+    currentPlaylist, // Needed for playNext/Previous disabled state
+    audioRef,
+    playSong,
+    togglePlay,
+    playNext,
+    playPrevious,
+    seekTo,
+    setVolume,
+    toggleMute,
+    setPlaybackRate,
+    toggleShuffle,
+    toggleRepeat,
+    setPlaylist, // Renamed from setAudioPlayerPlaylist to avoid clash if needed
+  } = useAudioPlayerContext();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -43,6 +87,17 @@ const ProfilePage: React.FC = () => {
       if (currentUser) {
         setEmail(currentUser.email || '');
         await fetchUserData(currentUser.uid);
+        // Fetch liked songs
+        try {
+          const likedSongsRef = collection(db, 'users', currentUser.uid, 'likedSongs');
+          const likedDocs = await getDocs(likedSongsRef);
+          const likedIds = likedDocs.docs
+            .filter(doc => !doc.data().deleted)
+            .map(doc => doc.data().id);
+          setLikedSongs(likedIds);
+        } catch (err) {
+          console.error('Failed to load liked songs:', err);
+        }
       }
       setLoading(false);
     });
@@ -61,7 +116,7 @@ const ProfilePage: React.FC = () => {
         setDateOfBirth(data.dateOfBirth || '');
         setPreferences(data.preferences || []);
         setSelectedGenres(data.preferences || []);
-        
+
         // If no preferences set, automatically show genre selection
         if (!data.preferences || data.preferences.length < 3) {
           setShowGenreModal(true);
@@ -78,14 +133,17 @@ const ProfilePage: React.FC = () => {
   const handleUpdateName = async () => {
     if (!user) return;
     try {
-      const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
-      });
-      if (response.ok) {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { name }, { merge: true });
+      // The backend URL is commented out, so directly use Firestore
+      // const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ name })
+      // });
+      // if (response.ok) {
         setEditingName(false);
-      }
+      // }
     } catch (err) {
       console.error('Failed to update name:', err);
     }
@@ -94,14 +152,16 @@ const ProfilePage: React.FC = () => {
   const handleUpdateDOB = async () => {
     if (!user) return;
     try {
-      const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dateOfBirth })
-      });
-      if (response.ok) {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { dateOfBirth }, { merge: true });
+      // const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ dateOfBirth })
+      // });
+      // if (response.ok) {
         setEditingDOB(false);
-      }
+      // }
     } catch (err) {
       console.error('Failed to update DOB:', err);
     }
@@ -110,14 +170,16 @@ const ProfilePage: React.FC = () => {
   const handleUpdatePhone = async () => {
     if (!user) return;
     try {
-      const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber })
-      });
-      if (response.ok) {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { phoneNumber }, { merge: true });
+      // const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ phoneNumber })
+      // });
+      // if (response.ok) {
         setEditingPhone(false);
-      }
+      // }
     } catch (err) {
       console.error('Failed to update phone:', err);
     }
@@ -146,7 +208,7 @@ const ProfilePage: React.FC = () => {
         phoneNumber: phoneNumber,
         preferences: selectedGenres
       }, { merge: true });
-      
+
       setPreferences(selectedGenres);
       setShowGenreModal(false);
       // Preferences saved silently
@@ -156,9 +218,65 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const toggleLike = async (song?: Song) => {
+    const targetSong = song || currentSong;
+    if (!targetSong || !user) {
+      console.log('Cannot toggle like: no song or user');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const likedSongsRef = collection(userRef, 'likedSongs');
+
+      if (likedSongs.includes(targetSong.id)) {
+        // Unlike: remove from state
+        setLikedSongs(likedSongs.filter(id => id !== targetSong.id));
+        // Remove from Firestore (mark as deleted)
+        const likedDocs = await getDocs(likedSongsRef);
+        const songDoc = likedDocs.docs.find(doc => doc.data().id === targetSong.id);
+        if (songDoc) {
+          await updateDoc(doc(db, 'users', user.uid, 'likedSongs', songDoc.id), {
+            deleted: true
+          });
+          console.log('Song unliked successfully');
+        }
+      } else {
+        // Like: add to state
+        setLikedSongs([...likedSongs, targetSong.id]);
+        // Add to Firestore
+        const docRef = await addDoc(likedSongsRef, {
+          id: targetSong.id,
+          title: targetSong.title,
+          artist: targetSong.artist,
+          artwork: targetSong.artwork,
+          genre: targetSong.genre,
+          previewUrl: targetSong.previewUrl,
+          likedAt: new Date().toISOString()
+        });
+        console.log('Song liked successfully, doc ID:', docRef.id);
+      }
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
+  };
+
+  // Helper to format time for display - copied from Dashboard
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/');
+  };
+
+  // Placeholder for handleEmojiSelect, if EmojiReaction is part of the player UI
+  const handleEmojiSelect = (emoji: string) => {
+    console.log(`Emoji selected on Profile Page: ${emoji}`);
+    // In a real app, you'd likely save this mood to Firestore linked to the current song
   };
 
   if (loading) {
@@ -169,20 +287,22 @@ const ProfilePage: React.FC = () => {
     );
   }
 
+  const isCurrentSongLiked = currentSong && likedSongs.includes(currentSong.id);
+
   return (
     <div className="profile-page">
       {/* Sidebar */}
       <aside className="sidenav">
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <img 
-              src="/assets/images/braintest-logo.png" 
-              alt="BrainTest Music" 
+            <img
+              src="/assets/images/braintest-logo.png"
+              alt="BrainTest Music"
               className="logo-icon"
             />
           </div>
         </div>
-        
+
         <div className="nav-section">
           <h3 className="nav-section-title">Menu</h3>
           <div className="nav-divider"></div>
@@ -206,10 +326,6 @@ const ProfilePage: React.FC = () => {
           <h3 className="nav-section-title">Help</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item" onClick={() => alert('Settings page coming soon!')} style={{ cursor: 'pointer' }}>
-              <span className="nav-icon"><MdSettings /></span>
-              <span>Settings</span>
-            </div>
             <div className="nav-item" onClick={() => navigate('/dashboard/faq')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
@@ -237,9 +353,9 @@ const ProfilePage: React.FC = () => {
             <label className="info-label">Email</label>
             <div className="info-value-container">
               {editingEmail ? (
-                <input 
-                  type="email" 
-                  value={email} 
+                <input
+                  type="email"
+                  value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="info-input"
                 />
@@ -249,8 +365,8 @@ const ProfilePage: React.FC = () => {
                   <span className="info-status unverified">Unverified</span>
                 </>
               )}
-              <button 
-                className="edit-btn" 
+              <button
+                className="edit-btn"
                 onClick={() => setEditingEmail(!editingEmail)}
               >
                 Edit
@@ -263,8 +379,8 @@ const ProfilePage: React.FC = () => {
             <label className="info-label">Password</label>
             <div className="info-value-container">
               <span className="info-value">************</span>
-              <button 
-                className="edit-btn" 
+              <button
+                className="edit-btn"
                 onClick={() => setEditingPassword(!editingPassword)}
               >
                 Edit
@@ -278,9 +394,9 @@ const ProfilePage: React.FC = () => {
             <div className="info-value-container">
               {editingName ? (
                 <>
-                  <input 
-                    type="text" 
-                    value={name} 
+                  <input
+                    type="text"
+                    value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="info-input"
                   />
@@ -289,8 +405,8 @@ const ProfilePage: React.FC = () => {
               ) : (
                 <>
                   <span className="info-value">{name || 'Not set'}</span>
-                  <button 
-                    className="edit-btn" 
+                  <button
+                    className="edit-btn"
                     onClick={() => setEditingName(true)}
                   >
                     Edit
@@ -306,9 +422,9 @@ const ProfilePage: React.FC = () => {
             <div className="info-value-container">
               {editingDOB ? (
                 <>
-                  <input 
-                    type="date" 
-                    value={dateOfBirth} 
+                  <input
+                    type="date"
+                    value={dateOfBirth}
                     onChange={(e) => setDateOfBirth(e.target.value)}
                     className="info-input"
                   />
@@ -323,8 +439,8 @@ const ProfilePage: React.FC = () => {
                       day: 'numeric'
                     }) : 'Not set'}
                   </span>
-                  <button 
-                    className="edit-btn" 
+                  <button
+                    className="edit-btn"
                     onClick={() => setEditingDOB(true)}
                   >
                     Edit
@@ -340,9 +456,9 @@ const ProfilePage: React.FC = () => {
             <div className="info-value-container">
               {editingPhone ? (
                 <>
-                  <input 
-                    type="tel" 
-                    value={phoneNumber} 
+                  <input
+                    type="tel"
+                    value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     className="info-input"
                     placeholder="(123) 456-7890"
@@ -352,8 +468,8 @@ const ProfilePage: React.FC = () => {
               ) : (
                 <>
                   <span className="info-value">{phoneNumber || 'Not set'}</span>
-                  <button 
-                    className="edit-btn" 
+                  <button
+                    className="edit-btn"
                     onClick={() => setEditingPhone(true)}
                   >
                     Edit
@@ -405,7 +521,7 @@ const ProfilePage: React.FC = () => {
           <div className="section-header-with-edit">
             <h2 className="section-title">Music Preferences</h2>
             {preferences.length > 0 && (
-              <button 
+              <button
                 className="edit-btn"
                 onClick={() => setShowGenreModal(!showGenreModal)}
               >
@@ -414,13 +530,13 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
           <div className="section-divider"></div>
-          
+
           {!showGenreModal ? (
             preferences.length > 0 ? (
               <div className="music-tiles">
                 {preferences.map((genre, index) => (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className={`music-tile ${index % 2 === 0 ? 'purple' : 'orange'}`}
                   >
                     {genre}
@@ -453,7 +569,7 @@ const ProfilePage: React.FC = () => {
                   onClick={handleSaveGenres}
                   className="save-btn"
                   disabled={selectedGenres.length < 3}
-                  style={{ 
+                  style={{
                     padding: '12px 24px',
                     opacity: selectedGenres.length < 3 ? 0.5 : 1,
                     cursor: selectedGenres.length < 3 ? 'not-allowed' : 'pointer'
@@ -466,6 +582,118 @@ const ProfilePage: React.FC = () => {
           )}
         </section>
       </main>
+
+      {/* Music Player UI (uses currentSong from context) */}.
+      {currentSong && (
+        <div className="music-player">
+          <div className="player-left">
+            <div className="player-album-art-container">
+              <img
+                src={currentSong.artwork}
+                alt={currentSong.title}
+                className="player-album-art"
+              />
+              <AudioVisualizer
+                isPlaying={isPlaying}
+              />
+            </div>
+            <div className="player-song-info">
+              <div className="player-song-title">{currentSong.title}</div>
+              <div className="player-song-artist">{currentSong.artist}</div>
+            </div>
+          </div>
+
+          <div className="player-controls-inline">
+            <button
+              className="control-btn"
+              onClick={playPrevious}
+              disabled={currentPlaylist.length === 0}
+            >
+              <MdSkipPrevious size={20} />
+            </button>
+            <button
+              className="control-btn control-btn-play"
+              onClick={togglePlay}
+            >
+              {isPlaying ? <MdPause size={24} /> : <MdPlayArrow size={24} />}
+            </button>
+            <button
+              className="control-btn"
+              onClick={playNext}
+              disabled={currentPlaylist.length === 0}
+            >
+              <MdSkipNext size={20} />
+            </button>
+          </div>
+
+          <div className="player-center">
+            <div className="progress-bar">
+              <span className="time-current">{formatTime(playerTime)}</span>
+              <div
+                className="progress-track"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const percentage = x / rect.width;
+                  seekTo(percentage * playerDuration);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${playerDuration > 0 ? (playerTime / playerDuration) * 100 : 0}%`
+                  }}
+                ></div>
+              </div>
+              <span className="time-total">{formatTime(playerDuration)}</span>
+            </div>
+          </div>
+
+          <div className="player-right">
+            <div className="volume-controls">
+              <EmojiReaction onEmojiSelect={handleEmojiSelect} />
+              <VolumeControl
+                volume={volume}
+                onVolumeChange={setVolume}
+                onToggleMute={toggleMute}
+              />
+              <PlaybackSpeedControl
+                speed={playbackRate}
+                onChange={setPlaybackRate}
+              />
+              <button
+                className={`volume-btn ${isRepeat ? 'liked' : ''}`}
+                onClick={toggleRepeat}
+              >
+                <MdRepeat size={18} />
+              </button>
+              <button
+                className={`volume-btn ${isShuffle ? 'liked' : ''}`}
+                onClick={toggleShuffle}
+              >
+                <MdShuffle size={18} />
+              </button>
+              <button
+                className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`}
+                onClick={() => currentSong && toggleLike(currentSong)}
+                title="Like song"
+              >
+                {isCurrentSongLiked ?
+                  <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />
+                }
+              </button>
+              <button
+                className="volume-btn"
+                onClick={() => setShowAddToPlaylistModal(true)}
+                title="Add to playlist"
+              >
+                <MdMoreHoriz size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -56,12 +56,12 @@ function AppContent() {
 }
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
+  // const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      // setUser(currentUser); // The ESLint warning refers to the 'user' variable, not 'setUser'
       setLoading(false);
     });
     return () => unsubscribe();

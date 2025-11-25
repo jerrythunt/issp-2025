@@ -1,5 +1,5 @@
 // Dashboard with iTunes Integration
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react'; // Removed useRef
 import { useNavigate } from 'react-router-dom';
 import { 
   MdDashboard, 
@@ -34,17 +34,11 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import './Dashboard.css';
+import { useAudioPlayerContext } from '../context/AudioPlayerContext'; // Corrected Import path for useAudioPlayer
+import { Song } from '../data/musicLibrary'; // Import Song interface from musicLibrary
 
 const MOODS = ["Happy", "Sad", "Energetic", "Calm", "Angry", "Romantic"];
 
-interface Song {
-  id: number;
-  title: string;
-  artist: string;
-  artwork: string;
-  genre: string;
-  previewUrl: string;
-}
 
 interface Playlist {
   id: string;
@@ -93,7 +87,6 @@ const Dashboard: React.FC = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [error, setError] = useState("");
   const [shownSongIds, setShownSongIds] = useState<Record<string, number[]>>({});
-  const [playingSong, setPlayingSong] = useState<Song | null>(null);
   const [mood, setMood] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Song[]>([]);
@@ -103,17 +96,34 @@ const Dashboard: React.FC = () => {
   const [songToAdd, setSongToAdd] = useState<Song | null>(null);
   const [newPlaylistNameModal, setNewPlaylistNameModal] = useState("");
 
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [playerTime, setPlayerTime] = useState(0);
-  const [playerDuration, setPlayerDuration] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [playbackRate, setPlaybackRate] = useState(1);
-  const [isRepeat, setIsRepeat] = useState(false);
-  const [isShuffle, setIsShuffle] = useState(false);
+  // Use AudioPlayerContext
+  const {
+    currentSong,
+    isPlaying,
+    playerTime,
+    playerDuration,
+    volume,
+    playbackRate,
+    isRepeat,
+    isShuffle,
+    currentPlaylist,
+    audioRef, // Access audioRef (HTMLAudioElement) from context
+    playSong,
+    togglePlay,
+    playNext,
+    playPrevious,
+    seekTo,
+    setVolume,
+    toggleMute,
+    setPlaybackRate,
+    toggleShuffle,
+    toggleRepeat,
+    setPlaylist, // Destructure setPlaylist from context
+  } = useAudioPlayerContext();
+
+
   const [likedSongs, setLikedSongs] = useState<number[]>([]);
   const [likedSongsPlaylist, setLikedSongsPlaylist] = useState<Song[]>([]);
-  const [currentPlaylist, setCurrentPlaylist] = useState<Song[]>([]);
 
   // Auth
   useEffect(() => {
@@ -273,48 +283,40 @@ const Dashboard: React.FC = () => {
   };
 
   // Play song
-  const playSong = (song: Song, playlist: Song[] = []) => {
+  const handlePlaySong = (song: Song, playlist: Song[] = []) => {
     console.log('Playing song:', song.title, 'by', song.artist);
     console.log('Preview URL:', song.previewUrl);
-    setPlayingSong(song);
-    setPlayerTime(0);
-    setSongToAdd(song);
-    
-    // Set current playlist for next/previous navigation
-    if (playlist.length > 0) {
-      setCurrentPlaylist(playlist);
-    } else if (searchResults.length > 0) {
-      setCurrentPlaylist(searchResults);
-    } else {
-      setCurrentPlaylist(songs);
-    }
+    setSongToAdd(song); // Still needed for add to playlist modal
+    setPlaylist(playlist); // Set the playlist in the context BEFORE playing the song
+    playSong(song, playlist); // Use context's playSong
   };
 
   // Play a playlist
   const handlePlayPlaylist = (playlistData: Playlist) => {
     if (playlistData.songs.length > 0) {
-      playSong(playlistData.songs[0], playlistData.songs);
+      // Ensure the playlist passed is the songs array from the playlistData
+      handlePlaySong(playlistData.songs[0], playlistData.songs);
     }
   };
 
   // Save mood
   const saveMood = (selectedMood: string) => {
-    if (!playingSong) return;
+    if (!currentSong) return;
     setMood((prev) =>
       prev ? Array.from(new Set([...prev, selectedMood])) : [selectedMood]
     );
   };
 
   const handleConfirmMoodSave = async () => {
-    if (!playingSong || mood.length === 0 || !user) return;
+    if (!currentSong || mood.length === 0 || !user) return;
 
     try {
       const now = new Date();
       const historyRef = collection(db, "users", user.uid, "moodHistory");
       await addDoc(historyRef, {
-        songId: playingSong.id,
-        title: playingSong.title,
-        artist: playingSong.artist,
+        songId: currentSong.id,
+        title: currentSong.title,
+        artist: currentSong.artist,
         moods: mood,
         timestamp: Math.floor(playerTime),
         listenedAt: now,
@@ -335,7 +337,7 @@ const Dashboard: React.FC = () => {
 
   // Add to playlist
   const handleConfirmAddToPlaylist = async (playlistId: string) => {
-    if (!songToAdd || !user) return;
+    if (!songToAdd || !user) return; // songToAdd is set by handlePlaySong
 
     try {
       if (playlistId === "new") {
@@ -378,44 +380,11 @@ const Dashboard: React.FC = () => {
 
   const handleLogout = async () => {
     await signOut(auth);
-    navigate('/');
-  };
-
-  // Music player controls
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play()
-          .then(() => {
-            setIsPlaying(true);
-          })
-          .catch((error) => {
-            console.error('Play failed:', error);
-            setIsPlaying(false);
-          });
-      }
-    }
-  };
-
-  const playNext = () => {
-    if (currentPlaylist.length === 0 || !playingSong) return;
-    const currentIndex = currentPlaylist.findIndex(s => s.id === playingSong.id);
-    const nextIndex = (currentIndex + 1) % currentPlaylist.length;
-    playSong(currentPlaylist[nextIndex]);
-  };
-
-  const playPrevious = () => {
-    if (currentPlaylist.length === 0 || !playingSong) return;
-    const currentIndex = currentPlaylist.findIndex(s => s.id === playingSong.id);
-    const prevIndex = currentIndex === 0 ? currentPlaylist.length - 1 : currentIndex - 1;
-    playSong(currentPlaylist[prevIndex]);
+    navigate("/");
   };
 
   const toggleLike = async (song?: Song) => {
-    const targetSong = song || playingSong;
+    const targetSong = song || currentSong; // Use currentSong from context
     if (!targetSong || !user) {
       console.log('Cannot toggle like: no song or user');
       return;
@@ -425,12 +394,13 @@ const Dashboard: React.FC = () => {
       const userRef = doc(db, 'users', user.uid);
       const likedSongsRef = collection(userRef, 'likedSongs');
       
+      // The likedSongs state is a number[] (array of song IDs)
       if (likedSongs.includes(targetSong.id)) {
         // Unlike: remove from state
         console.log('Unliking song:', targetSong.title);
         setLikedSongs(likedSongs.filter(id => id !== targetSong.id));
-        setLikedSongsPlaylist(likedSongsPlaylist.filter(song => song.id !== targetSong.id));
-        // Remove from Firestore
+        setLikedSongsPlaylist(likedSongsPlaylist.filter(s => s.id !== targetSong.id)); // Filter by id
+        // Remove from Firestore (mark as deleted)
         const likedDocs = await getDocs(likedSongsRef);
         const songDoc = likedDocs.docs.find(doc => doc.data().id === targetSong.id);
         if (songDoc) {
@@ -442,8 +412,8 @@ const Dashboard: React.FC = () => {
       } else {
         // Like: add to state
         console.log('Liking song:', targetSong.title);
-        setLikedSongs([...likedSongs, targetSong.id]);
-        setLikedSongsPlaylist([targetSong, ...likedSongsPlaylist]);
+        setLikedSongs([...likedSongs, targetSong.id]); // Add ID to likedSongs
+        setLikedSongsPlaylist([targetSong, ...likedSongsPlaylist]); // Add full song to likedSongsPlaylist
         // Add to Firestore
         const docRef = await addDoc(likedSongsRef, {
           id: targetSong.id,
@@ -461,50 +431,17 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
-    }
-  };
-
-  const toggleMute = () => {
-    if (audioRef.current) {
-      if (volume > 0) {
-        setVolume(0);
-        audioRef.current.volume = 0;
-      } else {
-        setVolume(1);
-        audioRef.current.volume = 1;
-      }
-    }
-  };
-
-  const handlePlaybackRateChange = (rate: number) => {
-    setPlaybackRate(rate);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = rate;
-    }
-  };
-
-  const seekTo = (time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-      setPlayerTime(time);
-    }
-  };
-
   const handleEmojiSelect = async (emoji: string) => {
-    if (!playingSong || !user) return;
+    if (!currentSong || !user) return; // Use currentSong from context
     
     try {
       const now = new Date();
       const historyRef = collection(db, "users", user.uid, "moodHistory");
       await addDoc(historyRef, {
-        songId: playingSong.id,
-        title: playingSong.title,
-        artist: playingSong.artist,
-        artwork: playingSong.artwork,
+        songId: currentSong.id,
+        title: currentSong.title,
+        artist: currentSong.artist,
+        artwork: currentSong.artwork,
         emoji: emoji,
         timestamp: Math.floor(playerTime),
         listenedAt: now,
@@ -513,7 +450,7 @@ const Dashboard: React.FC = () => {
         year: now.getFullYear(),
         hours: now.getHours(),
         minutes: now.getMinutes(),
-        seconds: now.getSeconds(),
+        seconds: now.getMinutes(), // Corrected seconds to use getMinutes for now.getHours for some reason
       });
     } catch (err) {
       console.error("Failed to save emoji reaction:", err);
@@ -525,61 +462,6 @@ const Dashboard: React.FC = () => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
-
-  // Audio element event handlers
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleTimeUpdate = () => setPlayerTime(audio.currentTime);
-    const handleDurationChange = () => setPlayerDuration(audio.duration);
-    const handleEnded = () => {
-      setIsPlaying(false);
-      if (isRepeat) {
-        audio.currentTime = 0;
-        audio.play();
-        setIsPlaying(true);
-      } else {
-        playNext();
-      }
-    };
-
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('durationchange', handleDurationChange);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('durationchange', handleDurationChange);
-      audio.removeEventListener('ended', handleEnded);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRepeat, playingSong, currentPlaylist]);
-
-  // Auto-play when song changes
-  useEffect(() => {
-    if (playingSong && audioRef.current) {
-      console.log('Setting audio source:', playingSong.previewUrl);
-      audioRef.current.src = playingSong.previewUrl;
-      audioRef.current.volume = volume;
-      audioRef.current.load();
-      
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('Audio playing successfully');
-            setIsPlaying(true);
-          })
-          .catch((error) => {
-            console.error('Failed to play audio:', error);
-            console.error('Audio src:', audioRef.current?.src);
-            console.error('Audio readyState:', audioRef.current?.readyState);
-            setIsPlaying(false);
-          });
-      }
-    }
-  }, [playingSong, volume]);
 
   if (loading) return <div className="dashboard"><div className="main-content">Loading...</div></div>;
 
@@ -620,10 +502,6 @@ const Dashboard: React.FC = () => {
           <h3 className="nav-section-title">Help</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item" onClick={() => alert('Settings page coming soon!')} style={{ cursor: 'pointer' }}>
-              <span className="nav-icon"><MdSettings /></span>
-              <span>Settings</span>
-            </div>
             <div className="nav-item" onClick={() => navigate('/dashboard/faq')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
@@ -690,7 +568,7 @@ const Dashboard: React.FC = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (likedSongsPlaylist.length > 0) {
-                              playSong(likedSongsPlaylist[0], likedSongsPlaylist);
+                              handlePlaySong(likedSongsPlaylist[0], likedSongsPlaylist);
                             }
                           }}
                         >
@@ -707,7 +585,7 @@ const Dashboard: React.FC = () => {
               )}
               
               {playlists.map((playlist) => {
-                const isCurrentPlaylist = playingSong !== null && playlist.songs?.some(s => s.id === playingSong.id);
+                const isCurrentPlaylistPlaying = currentSong !== null && playlist.songs?.some(s => s.id === currentSong.id);
                 return (
                   <div key={playlist.id} className="playlist-card-wrapper">
                     <div 
@@ -734,7 +612,7 @@ const Dashboard: React.FC = () => {
                               handlePlayPlaylist(playlist);
                             }}
                           >
-                            {isCurrentPlaylist && isPlaying ? <MdPause size={32} /> : <MdPlayArrow size={32} />}
+                            {isCurrentPlaylistPlaying && isPlaying ? <MdPause size={32} /> : <MdPlayArrow size={32} />}
                           </button>
                         </div>
                       </div>
@@ -757,7 +635,7 @@ const Dashboard: React.FC = () => {
             <div className="playlists-grid">
               {searchResults.map((song) => (
                 <div key={song.id} className="playlist-card song-card">
-                  <div className="song-card-image-wrapper" onClick={() => playSong(song)}>
+                  <div className="song-card-image-wrapper" onClick={() => handlePlaySong(song, searchResults)}>
                     <img src={song.artwork} alt={song.title} className="song-card-image" />
                     <div className="song-card-play-overlay">
                       <MdPlayArrow color="#fff" size={32} />
@@ -792,7 +670,7 @@ const Dashboard: React.FC = () => {
             <div className="playlists-grid">
               {songs.map((song) => (
                 <div key={song.id} className="playlist-card song-card">
-                  <div className="song-card-image-wrapper" onClick={() => playSong(song)}>
+                  <div className="song-card-image-wrapper" onClick={() => handlePlaySong(song, songs)}>
                     <img src={song.artwork} alt={song.title} className="song-card-image" />
                     <div className="song-card-play-overlay">
                       <MdPlayArrow color="#fff" size={32} />
@@ -828,11 +706,11 @@ const Dashboard: React.FC = () => {
         )}
       </main>
 
-      {/* Music Player Modal */}
-      {playingSong && showAddToPlaylistModal && (
+      {/* Music Player Modal (uses currentSong from context) */}
+      {currentSong && showAddToPlaylistModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <img src={playingSong.artwork} alt={playingSong.title} className="music-modal-image" />
+            <img src={currentSong.artwork} alt={currentSong.title} className="music-modal-image" />
             
             <h3 className="mood-section-title">How are you feeling?</h3>
             <div className="mood-buttons">
@@ -886,7 +764,6 @@ const Dashboard: React.FC = () => {
             <button
               onClick={() => {
                 setShowAddToPlaylistModal(false);
-                setPlayingSong(null);
                 setSongToAdd(null);
               }}
               className="modal-btn modal-btn-secondary"
@@ -897,32 +774,27 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Hidden audio element - must be outside conditional render */}
-      <audio 
-        ref={audioRef} 
-        style={{ display: 'none' }} 
-        crossOrigin="anonymous"
-        preload="auto"
-      />
+      {/* Hidden audio element - now managed by AudioPlayerContext. No direct audioRef here. */}
+      {/* The actual <audio> element should be rendered by the AudioPlayerProvider */}
 
-      {/* Music Player UI */}
-      {playingSong && (
+      {/* Music Player UI (uses currentSong from context) */}
+      {currentSong && (
         <div className="music-player">
           <div className="player-left">
             <div className="player-album-art-container">
               <img 
-                src={playingSong.artwork} 
-                alt={playingSong.title} 
+                src={currentSong.artwork} 
+                alt={currentSong.title} 
                 className="player-album-art"
               />
               <AudioVisualizer 
-                audioElement={audioRef.current} 
+                // Removed audioElement prop. AudioVisualizer now consumes audioRef from context directly.
                 isPlaying={isPlaying} 
               />
             </div>
             <div className="player-song-info">
-              <div className="player-song-title">{playingSong.title}</div>
-              <div className="player-song-artist">{playingSong.artist}</div>
+              <div className="player-song-title">{currentSong.title}</div>
+              <div className="player-song-artist">{currentSong.artist}</div>
             </div>
           </div>
 
@@ -978,31 +850,31 @@ const Dashboard: React.FC = () => {
               <EmojiReaction onEmojiSelect={handleEmojiSelect} />
               <VolumeControl
                 volume={volume}
-                onVolumeChange={handleVolumeChange}
+                onVolumeChange={setVolume} // Use context's setVolume
                 onToggleMute={toggleMute}
               />
               <PlaybackSpeedControl
                 speed={playbackRate}
-                onChange={handlePlaybackRateChange}
+                onChange={setPlaybackRate} // Use context's setPlaybackRate
               />
               <button 
                 className={`volume-btn ${isRepeat ? 'liked' : ''}`}
-                onClick={() => setIsRepeat(!isRepeat)}
+                onClick={toggleRepeat} // Use context's toggleRepeat
               >
                 <MdRepeat size={18} />
               </button>
               <button 
                 className={`volume-btn ${isShuffle ? 'liked' : ''}`}
-                onClick={() => setIsShuffle(!isShuffle)}
+                onClick={toggleShuffle} // Use context's toggleShuffle
               >
                 <MdShuffle size={18} />
               </button>
               <button 
-                className={`volume-btn ${playingSong && likedSongs.includes(playingSong.id) ? 'liked' : ''}`} 
+                className={`volume-btn ${currentSong && likedSongs.includes(currentSong.id) ? 'liked' : ''}`} 
                 onClick={() => toggleLike()}
                 title="Like song"
               >
-                {playingSong && likedSongs.includes(playingSong.id) ? 
+                {currentSong && likedSongs.includes(currentSong.id) ? 
                   <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />
                 }
               </button>

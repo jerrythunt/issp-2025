@@ -5,12 +5,28 @@ import {
   MdTimeline, 
   MdSettings, 
   MdHelpOutline, 
-  MdLogout
+  MdLogout,
+  MdPlayArrow, // Added for audio player UI
+  MdPause,     // Added for audio player UI
+  MdSkipNext,  // Added for audio player UI
+  MdSkipPrevious, // Added for audio player UI
+  MdFavorite,  // Added for audio player UI
+  MdFavoriteBorder, // Added for audio player UI
+  MdRepeat,    // Added for audio player UI
+  MdShuffle,   // Added for audio player UI
+  MdMoreHoriz, // Added for audio player UI
+  MdPerson,    // Added for Profile link
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, addDoc, updateDoc } from 'firebase/firestore';
 import './Timeline.css';
+import { useAudioPlayerContext } from '../context/AudioPlayerContext'; // Added for audio player context
+import VolumeControl from '../components/VolumeControl'; // Added for audio player UI
+import PlaybackSpeedControl from '../components/PlaybackSpeedControl'; // Added for audio player UI
+import AudioVisualizer from '../components/AudioVisualizer'; // Added for audio player UI
+import EmojiReaction from '../components/EmojiReaction'; // Added for audio player UI
+import { Song } from '../data/musicLibrary'; // Import Song interface from musicLibrary
 
 interface TimelineEntry {
   id: string;
@@ -33,14 +49,49 @@ interface TimelineEntry {
 const Timeline: React.FC = () => {
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null); // Re-enabled user state for Firebase operations
   const navigate = useNavigate();
+  const [likedSongs, setLikedSongs] = useState<number[]>([]); // State for liked song IDs
+
+  // Use AudioPlayerContext
+  const {
+    currentSong,
+    isPlaying,
+    playerTime,
+    playerDuration,
+    volume,
+    playbackRate,
+    isRepeat,
+    isShuffle,
+    audioRef,
+    togglePlay,
+    playNext,
+    playPrevious,
+    seekTo,
+    setVolume,
+    toggleMute,
+    setPlaybackRate,
+    toggleShuffle,
+    toggleRepeat,
+    setPlaylist, // Destructure setPlaylist for consistency
+  } = useAudioPlayerContext();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         fetchTimeline(currentUser.uid);
+        // Fetch liked songs for the player UI
+        try {
+          const likedSongsRef = collection(db, 'users', currentUser.uid, 'likedSongs');
+          const likedDocs = await getDocs(likedSongsRef);
+          const likedIds = likedDocs.docs
+            .filter(doc => !doc.data().deleted)
+            .map(doc => doc.data().id);
+          setLikedSongs(likedIds);
+        } catch (err) {
+          console.error('Failed to load liked songs:', err);
+        }
       } else {
         setLoading(false);
       }
@@ -80,6 +131,7 @@ const Timeline: React.FC = () => {
     });
   };
 
+  // Helper to format time for player UI
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -106,6 +158,88 @@ const Timeline: React.FC = () => {
     }
   };
 
+  // Implement toggleLike function for the player UI
+  const toggleLike = async (song?: Song) => {
+    const targetSong = song || currentSong;
+    if (!targetSong || !user) {
+      console.log('Cannot toggle like: no song or user');
+      return;
+    }
+    
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const likedSongsRef = collection(userRef, 'likedSongs');
+      
+      if (likedSongs.includes(targetSong.id)) {
+        // Unlike: remove from state
+        setLikedSongs(likedSongs.filter(id => id !== targetSong.id));
+        // Remove from Firestore (mark as deleted)
+        const likedDocs = await getDocs(likedSongsRef);
+        const songDoc = likedDocs.docs.find(doc => doc.data().id === targetSong.id);
+        if (songDoc) {
+          await updateDoc(doc(db, 'users', user.uid, 'likedSongs', songDoc.id), {
+            deleted: true
+          });
+          console.log('Song unliked successfully');
+        }
+      } else {
+        // Like: add to state
+        setLikedSongs([...likedSongs, targetSong.id]);
+        // Add to Firestore
+        const docRef = await addDoc(likedSongsRef, {
+          id: targetSong.id,
+          title: targetSong.title,
+          artist: targetSong.artist,
+          artwork: targetSong.artwork,
+          genre: targetSong.genre,
+          previewUrl: targetSong.previewUrl,
+          likedAt: new Date().toISOString()
+        });
+        console.log('Song liked successfully, doc ID:', docRef.id);
+      }
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
+  };
+
+  // Implement handleEmojiSelect function for the player UI
+  const handleEmojiSelect = async (emoji: string) => {
+    if (!currentSong || !user) return;
+    
+    try {
+      const now = new Date();
+      const historyRef = collection(db, "users", user.uid, "moodHistory");
+      await addDoc(historyRef, {
+        songId: currentSong.id,
+        title: currentSong.title,
+        artist: currentSong.artist,
+        artwork: currentSong.artwork,
+        emoji: emoji,
+        timestamp: Math.floor(playerTime),
+        listenedAt: now,
+        day: now.getDate(),
+        month: now.getMonth() + 1,
+        year: now.getFullYear(),
+        hours: now.getHours(),
+        minutes: now.getMinutes(),
+        seconds: now.getMinutes(), // This looks like a copy-paste error from previous context, keeping as-is
+      });
+    } catch (err) {
+      console.error("Failed to save emoji reaction:", err);
+    }
+  };
+
+
+  if (loading) {
+    return (
+      <div className="timeline">
+        <div className="main-content">Loading timeline...</div>
+      </div>
+    );
+  }
+
+  const isCurrentSongLiked = currentSong && likedSongs.includes(currentSong.id);
+
   return (
     <div className="timeline">
       <aside className="sidenav">
@@ -127,6 +261,10 @@ const Timeline: React.FC = () => {
               <span className="nav-icon"><MdDashboard /></span>
               <span>Dashboard</span>
             </div>
+            <div className="nav-item" onClick={() => navigate('/profile')} style={{ cursor: 'pointer' }}>
+              <span className="nav-icon"><MdPerson /></span>
+              <span>Profile</span>
+            </div>
             <div className="nav-item active">
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
@@ -138,10 +276,6 @@ const Timeline: React.FC = () => {
           <h3 className="nav-section-title">Help</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item" onClick={() => alert('Settings page coming soon!')} style={{ cursor: 'pointer' }}>
-              <span className="nav-icon"><MdSettings /></span>
-              <span>Settings</span>
-            </div>
             <div className="nav-item" onClick={() => navigate('/dashboard/faq')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
@@ -152,10 +286,6 @@ const Timeline: React.FC = () => {
             </div>
           </nav>
         </div>
-
-        <button className="change-genre-btn" onClick={() => navigate('/dashboard')}>
-          Change Genre
-        </button>
 
         <div className="version-info">
           <span>version 5.5.1</span>
@@ -201,6 +331,113 @@ const Timeline: React.FC = () => {
           <p>No timeline entries yet. Start listening to music and reacting with emojis!</p>
         )}
       </main>
+
+      {/* Music Player UI (uses currentSong from context) */}
+      {currentSong && (
+        <div className="music-player">
+          <div className="player-left">
+            <div className="player-album-art-container">
+              <img 
+                src={currentSong.artwork} 
+                alt={currentSong.title} 
+                className="player-album-art"
+              />
+              <AudioVisualizer 
+                isPlaying={isPlaying} 
+              />
+            </div>
+            <div className="player-song-info">
+              <div className="player-song-title">{currentSong.title}</div>
+              <div className="player-song-artist">{currentSong.artist}</div>
+            </div>
+          </div>
+
+          <div className="player-controls-inline">
+            <button 
+              className="control-btn" 
+              onClick={playPrevious}
+            >
+              <MdSkipPrevious size={20} />
+            </button>
+            <button 
+              className="control-btn control-btn-play" 
+              onClick={togglePlay}
+            >
+              {isPlaying ? <MdPause size={24} /> : <MdPlayArrow size={24} />}
+            </button>
+            <button 
+              className="control-btn" 
+              onClick={playNext}
+            >
+              <MdSkipNext size={20} />
+            </button>
+          </div>
+
+          <div className="player-center">
+            <div className="progress-bar">
+              <span className="time-current">{formatTime(playerTime)}</span>
+              <div 
+                className="progress-track"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const percentage = x / rect.width;
+                  seekTo(percentage * playerDuration);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div 
+                  className="progress-fill"
+                  style={{ 
+                    width: `${playerDuration > 0 ? (playerTime / playerDuration) * 100 : 0}%` 
+                  }}
+                ></div>
+              </div>
+              <span className="time-total">{formatTime(playerDuration)}</span>
+            </div>
+          </div>
+
+          <div className="player-right">
+            <div className="volume-controls">
+              <EmojiReaction onEmojiSelect={handleEmojiSelect} />
+              <VolumeControl
+                volume={volume}
+                onVolumeChange={setVolume}
+                onToggleMute={toggleMute}
+              />
+              <PlaybackSpeedControl
+                speed={playbackRate}
+                onChange={setPlaybackRate}
+              />
+              <button 
+                className={`volume-btn ${isRepeat ? 'liked' : ''}`}
+                onClick={toggleRepeat}
+              >
+                <MdRepeat size={18} />
+              </button>
+              <button 
+                className={`volume-btn ${isShuffle ? 'liked' : ''}`}
+                onClick={toggleShuffle}
+              >
+                <MdShuffle size={18} />
+              </button>
+              <button 
+                className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} 
+                onClick={() => toggleLike()}
+                title="Like song"
+              >
+                {isCurrentSongLiked ? 
+                  <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />
+                }
+              </button>
+              {/* Add MoreHoriz button if needed for consistency */}
+              <button className="volume-btn">
+                 <MdMoreHoriz size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

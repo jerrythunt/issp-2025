@@ -1,14 +1,14 @@
 // Music Library - Local songs organized by genre
-// Place MP3 files in public/assets/music/ folder
+// Place MP3 files in public/assets/music/
 
 export interface Song {
-  id: string;
+  id: number; // Changed to number
   title: string;
   artist: string;
-  albumArt: string;
-  audioUrl: string;
-  duration: number; // in seconds
+  artwork: string; // Changed from albumArt to artwork
   genre: string;
+  previewUrl: string; // Changed from audioUrl to previewUrl
+  // Removed duration as it's not in the requested properties
 }
 
 export interface PlaylistData {
@@ -23,465 +23,417 @@ export interface PlaylistData {
 export const musicLibrary: Record<string, Song[]> = {
   'Rock': [
     {
-      id: 'rock-1',
+      id: 1, // Changed to number
       title: 'Summer Breeze',
       artist: 'Classic Rock Band',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/rock-1.mp3',
-      duration: 180,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/rock-1.mp3',
       genre: 'Rock'
     },
     {
-      id: 'rock-2',
+      id: 2, // Changed to number
       title: 'Highway Dreams',
       artist: 'The Wanderers',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/rock-2.mp3',
-      duration: 210,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/rock-2.mp3',
       genre: 'Rock'
     },
     {
-      id: 'rock-3',
+      id: 3, // Changed to number
       title: 'Electric Nights',
       artist: 'Voltage',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/rock-3.mp3',
-      duration: 195,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/rock-3.mp3',
       genre: 'Rock'
     }
   ],
   'Jazz': [
     {
-      id: 'jazz-1',
+      id: 4, // Changed to number
       title: 'Midnight Blues',
       artist: 'Smooth Quartet',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/jazz-1.mp3',
-      duration: 240,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/jazz-1.mp3',
       genre: 'Jazz'
     },
     {
-      id: 'jazz-2',
+      id: 5, // Changed to number
       title: 'City Lights',
       artist: 'Urban Jazz Ensemble',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/jazz-2.mp3',
-      duration: 220,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/jazz-2.mp3',
       genre: 'Jazz'
     },
     {
-      id: 'jazz-3',
+      id: 6, // Changed to number
       title: 'Sunset Serenade',
       artist: 'The Cool Cats',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/jazz-3.mp3',
-      duration: 200,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/jazz-3.mp3',
       genre: 'Jazz'
     }
   ],
   'Classical': [
     {
-      id: 'classical-1',
+      id: 7, // Changed to number
       title: 'Morning Sonata',
       artist: 'Symphony Orchestra',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/classical-1.mp3',
-      duration: 300,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/classical-1.mp3',
       genre: 'Classical'
     },
     {
-      id: 'classical-2',
+      id: 8, // Changed to number
       title: 'Piano Concerto',
       artist: 'Royal Philharmonic',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/classical-2.mp3',
-      duration: 280,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/classical-2.mp3',
       genre: 'Classical'
     },
     {
-      id: 'classical-3',
+      id: 9, // Changed to number
       title: 'String Quartet No. 5',
       artist: 'Chamber Music Society',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/classical-3.mp3',
-      duration: 260,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/classical-3.mp3',
       genre: 'Classical'
     }
   ],
   'Pop': [
     {
-      id: 'pop-1',
+      id: 10, // Changed to number
       title: 'Dancing Days',
       artist: 'Pop Stars',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/pop-1.mp3',
-      duration: 190,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/pop-1.mp3',
       genre: 'Pop'
     },
     {
-      id: 'pop-2',
+      id: 11, // Changed to number
       title: 'Summer Love',
       artist: 'The Heartbeats',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/pop-2.mp3',
-      duration: 175,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/pop-2.mp3',
       genre: 'Pop'
     },
     {
-      id: 'pop-3',
+      id: 12, // Changed to number
       title: 'Neon Lights',
       artist: 'City Pop',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/pop-3.mp3',
-      duration: 185,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/pop-3.mp3',
       genre: 'Pop'
     }
   ],
   'Country': [
     {
-      id: 'country-1',
+      id: 13, // Changed to number
       title: 'Country Roads',
       artist: 'The Travelers',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/country-1.mp3',
-      duration: 210,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/country-1.mp3',
       genre: 'Country'
     },
     {
-      id: 'country-2',
+      id: 14, // Changed to number
       title: 'Home Sweet Home',
       artist: 'Nashville Stars',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/country-2.mp3',
-      duration: 195,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/country-2.mp3',
       genre: 'Country'
     },
     {
-      id: 'country-3',
+      id: 15, // Changed to number
       title: 'Sunset Ranch',
       artist: 'Wild West Band',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/country-3.mp3',
-      duration: 205,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/country-3.mp3',
       genre: 'Country'
     }
   ],
   'Blues': [
     {
-      id: 'blues-1',
+      id: 16, // Changed to number
       title: 'Stormy Monday',
       artist: 'Delta Blues Band',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/blues-1.mp3',
-      duration: 225,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/blues-1.mp3',
       genre: 'Blues'
     },
     {
-      id: 'blues-2',
+      id: 17, // Changed to number
       title: 'Sweet Home Chicago',
       artist: 'Blues Brothers',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/blues-2.mp3',
-      duration: 240,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/blues-2.mp3',
       genre: 'Blues'
     },
     {
-      id: 'blues-3',
+      id: 18, // Changed to number
       title: 'Crossroads',
       artist: 'Guitar Legends',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/blues-3.mp3',
-      duration: 215,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/blues-3.mp3',
       genre: 'Blues'
     }
   ],
   'R&B': [
     {
-      id: 'rnb-1',
+      id: 19, // Changed to number
       title: 'Soul Sensation',
       artist: 'Smooth Grooves',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/rnb-1.mp3',
-      duration: 200,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/rnb-1.mp3',
       genre: 'R&B'
     },
     {
-      id: 'rnb-2',
+      id: 20, // Changed to number
       title: 'Velvet Nights',
       artist: 'The Soul Singers',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/rnb-2.mp3',
-      duration: 190,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/rnb-2.mp3',
       genre: 'R&B'
     },
     {
-      id: 'rnb-3',
+      id: 21, // Changed to number
       title: 'Rhythm & Love',
       artist: 'Urban Soul',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/rnb-3.mp3',
-      duration: 185,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/rnb-3.mp3',
       genre: 'R&B'
     }
   ],
   'Folk': [
     {
-      id: 'folk-1',
+      id: 22, // Changed to number
       title: 'Mountain Song',
       artist: 'Acoustic Wanderers',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/folk-1.mp3',
-      duration: 220,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/folk-1.mp3',
       genre: 'Folk'
     },
     {
-      id: 'folk-2',
+      id: 23, // Changed to number
       title: 'River Stories',
       artist: 'The Folk Collective',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/folk-2.mp3',
-      duration: 235,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/folk-2.mp3',
       genre: 'Folk'
     },
     {
-      id: 'folk-3',
+      id: 24, // Changed to number
       title: 'Wildflower',
       artist: 'Country Folk',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/folk-3.mp3',
-      duration: 210,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/folk-3.mp3',
       genre: 'Folk'
     }
   ],
   'Hip Hop': [
     {
-      id: 'hiphop-1',
+      id: 25, // Changed to number
       title: 'Street Poetry',
       artist: 'Urban Flow',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/hiphop-1.mp3',
-      duration: 190,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/hiphop-1.mp3',
       genre: 'Hip Hop'
     },
     {
-      id: 'hiphop-2',
+      id: 26, // Changed to number
       title: 'City Beats',
       artist: 'The MC Collective',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/hiphop-2.mp3',
-      duration: 205,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/hiphop-2.mp3',
       genre: 'Hip Hop'
     },
     {
-      id: 'hiphop-3',
+      id: 27, // Changed to number
       title: 'Rhythm & Rhyme',
       artist: 'Beat Masters',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/hiphop-3.mp3',
-      duration: 215,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/hiphop-3.mp3',
       genre: 'Hip Hop'
     }
   ],
   'Electronic': [
     {
-      id: 'electronic-1',
+      id: 28, // Changed to number
       title: 'Digital Dreams',
       artist: 'Synth Wave',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/electronic-1.mp3',
-      duration: 240,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/electronic-1.mp3',
       genre: 'Electronic'
     },
     {
-      id: 'electronic-2',
+      id: 29, // Changed to number
       title: 'Pulse',
       artist: 'Neon Lights',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/electronic-2.mp3',
-      duration: 220,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/electronic-2.mp3',
       genre: 'Electronic'
     },
     {
-      id: 'electronic-3',
+      id: 30, // Changed to number
       title: 'Circuit Break',
       artist: 'Digital Fusion',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/electronic-3.mp3',
-      duration: 230,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/electronic-3.mp3',
       genre: 'Electronic'
     }
   ],
   'Reggae': [
     {
-      id: 'reggae-1',
+      id: 31, // Changed to number
       title: 'Island Vibes',
       artist: 'Tropical Rhythms',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/reggae-1.mp3',
-      duration: 195,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/reggae-1.mp3',
       genre: 'Reggae'
     },
     {
-      id: 'reggae-2',
+      id: 32, // Changed to number
       title: 'Sunshine Groove',
       artist: 'Caribbean Soul',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/reggae-2.mp3',
-      duration: 210,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/reggae-2.mp3',
       genre: 'Reggae'
     },
     {
-      id: 'reggae-3',
+      id: 33, // Changed to number
       title: 'One Love',
       artist: 'Unity Band',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/reggae-3.mp3',
-      duration: 205,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/reggae-3.mp3',
       genre: 'Reggae'
     }
   ],
   'Metal': [
     {
-      id: 'metal-1',
+      id: 34, // Changed to number
       title: 'Iron Thunder',
       artist: 'Heavy Storm',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/metal-1.mp3',
-      duration: 215,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/metal-1.mp3',
       genre: 'Metal'
     },
     {
-      id: 'metal-2',
+      id: 35, // Changed to number
       title: 'Rage Machine',
       artist: 'Steel Force',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/metal-2.mp3',
-      duration: 225,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/metal-2.mp3',
       genre: 'Metal'
     },
     {
-      id: 'metal-3',
+      id: 36, // Changed to number
       title: 'Dark Abyss',
       artist: 'Shadow Legion',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/metal-3.mp3',
-      duration: 240,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/metal-3.mp3',
       genre: 'Metal'
     }
   ],
   'Indie': [
     {
-      id: 'indie-1',
+      id: 37, // Changed to number
       title: 'Coffee Shop Dreams',
       artist: 'The Wandering Hearts',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/indie-1.mp3',
-      duration: 185,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/indie-1.mp3',
       genre: 'Indie'
     },
     {
-      id: 'indie-2',
+      id: 38, // Changed to number
       title: 'Late Night Drive',
       artist: 'Echo & Fade',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/indie-2.mp3',
-      duration: 200,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/indie-2.mp3',
       genre: 'Indie'
     },
     {
-      id: 'indie-3',
+      id: 39, // Changed to number
       title: 'Vinyl Days',
       artist: 'Retro Souls',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/indie-3.mp3',
-      duration: 195,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/indie-3.mp3',
       genre: 'Indie'
     }
   ],
   'Soul': [
     {
-      id: 'soul-1',
+      id: 40, // Changed to number
       title: 'Smooth Operator',
       artist: 'Velvet Voice',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/soul-1.mp3',
-      duration: 220,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/soul-1.mp3',
       genre: 'Soul'
     },
     {
-      id: 'soul-2',
+      id: 41, // Changed to number
       title: 'Heart & Soul',
       artist: 'Deep Groove',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/soul-2.mp3',
-      duration: 235,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/soul-2.mp3',
       genre: 'Soul'
     },
     {
-      id: 'soul-3',
+      id: 42, // Changed to number
       title: 'Midnight Soul',
       artist: 'Satin Strings',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/soul-3.mp3',
-      duration: 210,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/soul-3.mp3',
       genre: 'Soul'
     }
   ],
   'Funk': [
     {
-      id: 'funk-1',
+      id: 43, // Changed to number
       title: 'Get Down Tonight',
       artist: 'Funky Bunch',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/funk-1.mp3',
-      duration: 205,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/funk-1.mp3',
       genre: 'Funk'
     },
     {
-      id: 'funk-2',
+      id: 44, // Changed to number
       title: 'Bass Line Fever',
       artist: 'Groove Machine',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/funk-2.mp3',
-      duration: 215,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/funk-2.mp3',
       genre: 'Funk'
     },
     {
-      id: 'funk-3',
+      id: 45, // Changed to number
       title: 'Funky Fresh',
       artist: 'The Groove Squad',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/funk-3.mp3',
-      duration: 200,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/funk-3.mp3',
       genre: 'Funk'
     }
   ],
   'Latin': [
     {
-      id: 'latin-1',
+      id: 46, // Changed to number
       title: 'Salsa Caliente',
       artist: 'Los Ritmos',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/latin-1.mp3',
-      duration: 210,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/latin-1.mp3',
       genre: 'Latin'
     },
     {
-      id: 'latin-2',
+      id: 47, // Changed to number
       title: 'Bachata Love',
       artist: 'Tropical Heat',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/latin-2.mp3',
-      duration: 225,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/latin-2.mp3',
       genre: 'Latin'
     },
     {
-      id: 'latin-3',
+      id: 48, // Changed to number
       title: 'Cumbia Nights',
       artist: 'La Banda',
-      albumArt: '/assets/images/placeholder.jpg',
-      audioUrl: '/assets/music/latin-3.mp3',
-      duration: 215,
+      artwork: '/assets/images/placeholder.jpg',
+      previewUrl: '/assets/music/latin-3.mp3',
       genre: 'Latin'
     }
   ]
@@ -500,7 +452,7 @@ export const getLikedSongs = (): Song[] => {
 };
 
 // Toggle like status for a song
-export const toggleSongLike = (songId: string): boolean => {
+export const toggleSongLike = (songId: number): boolean => { // Changed songId to number
   const likedSongs = JSON.parse(localStorage.getItem('likedSongs') || '[]');
   const index = likedSongs.indexOf(songId);
   
@@ -516,7 +468,7 @@ export const toggleSongLike = (songId: string): boolean => {
 };
 
 // Check if a song is liked
-export const isSongLiked = (songId: string): boolean => {
+export const isSongLiked = (songId: number): boolean => { // Changed songId to number
   const likedSongs = JSON.parse(localStorage.getItem('likedSongs') || '[]');
   return likedSongs.includes(songId);
 };
@@ -544,7 +496,7 @@ export const unlikeAllSongsInGenre = (genre: string): void => {
   const songIds = songs.map(song => song.id);
   
   // Remove all song IDs from liked songs
-  const updatedLikedSongs = likedSongs.filter((id: string) => !songIds.includes(id));
+  const updatedLikedSongs = likedSongs.filter((id: number) => !songIds.includes(id)); // Changed id to number
   
   localStorage.setItem('likedSongs', JSON.stringify(updatedLikedSongs));
 };

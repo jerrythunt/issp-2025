@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -23,28 +22,59 @@ import {
 import { usePageTitle } from './hooks/usePageTitle';
 import { logout } from '../firebaseAuth';
 import { useAudioPlayerContext } from '../context/AudioPlayerContext';
-import { isSongLiked, toggleSongLike, formatTime } from '../data/musicLibrary';
+import { isSongLiked, toggleSongLike } from '../data/musicLibrary';
 import VolumeControl from '../components/VolumeControl';
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
 import EmojiReaction from '../components/EmojiReaction';
+import AudioVisualizer from '../components/AudioVisualizer'; // Add this import
 import './Dashboard.css';
 import './FAQPage.css';
 
 type FAQItem = { q: string; a: string };
+
+// Utility function moved from Dashboard.tsx to be available
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
 
 const FAQPage: React.FC = () => {
   usePageTitle('FAQs');
   const navigate = useNavigate();
   const [openSet, setOpenSet] = useState<Set<string>>(new Set());
 
-  const audioPlayer = useAudioPlayerContext();
+  // Destructure values directly from the context
+  const {
+    currentSong,
+    isPlaying,
+    playerTime, // Corrected from currentTime
+    playerDuration, // Corrected from duration
+    volume,
+    playbackRate,
+    isRepeat,
+    isShuffle,
+    // currentPlaylist, // Removed as per instruction
+    audioRef, // HTMLAudioElement directly
+    // playSong, // Removed as per instruction
+    togglePlay,
+    playNext,
+    playPrevious,
+    seekTo,
+    setVolume,
+    toggleMute,
+    setPlaybackRate,
+    toggleShuffle,
+    toggleRepeat,
+  } = useAudioPlayerContext();
+
   const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
 
   useEffect(() => {
-    if (audioPlayer.currentSong) {
-      setIsCurrentSongLiked(isSongLiked(audioPlayer.currentSong.id));
+    if (currentSong) { // Use destructured currentSong
+      setIsCurrentSongLiked(isSongLiked(currentSong.id));
     }
-  }, [audioPlayer.currentSong]);
+  }, [currentSong]); // Dependency changed to currentSong
 
   const handleLogout = async () => {
     await logout();
@@ -52,19 +82,19 @@ const FAQPage: React.FC = () => {
   };
 
   const toggleLike = () => {
-    if (audioPlayer.currentSong) {
-      const newLikedStatus = toggleSongLike(audioPlayer.currentSong.id);
+    if (currentSong) { // Use destructured currentSong
+      const newLikedStatus = toggleSongLike(currentSong.id);
       setIsCurrentSongLiked(newLikedStatus);
     }
   };
 
   const handleEmojiSelect = (emoji: string) => {
-    if (audioPlayer.currentSong) {
+    if (currentSong) { // Use destructured currentSong
       const timelineEntry = {
-        song: audioPlayer.currentSong,
+        song: currentSong, // Use destructured currentSong
         emoji,
         timestamp: new Date().toISOString(),
-        songTimestamp: audioPlayer.currentTime,
+        songTimestamp: playerTime, // Corrected from audioPlayer.currentTime
       };
       const existingTimeline = JSON.parse(localStorage.getItem('timeline') || '[]');
       localStorage.setItem('timeline', JSON.stringify([...existingTimeline, timelineEntry]));
@@ -138,10 +168,6 @@ const FAQPage: React.FC = () => {
           <h3 className="nav-section-title">Help</h3>
           <div className="nav-divider"></div>
           <nav className="nav-items">
-            <div className="nav-item" onClick={() => navigate('/dashboard/settings')}>
-              <span className="nav-icon"><MdSettings /></span>
-              <span>Settings</span>
-            </div>
             <div className="nav-item active">
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
@@ -191,115 +217,120 @@ const FAQPage: React.FC = () => {
         </section>
       </main>
 
-      <div className="music-player">
-        <div className="player-left">
-          <div
-            className="album-art"
-            style={{
-              backgroundImage: audioPlayer.currentSong?.albumArt ? `url(${audioPlayer.currentSong.albumArt})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          ></div>
-          <div className="song-info">
-            <div className="song-title">{audioPlayer.currentSong?.title || 'No Song Playing'}</div>
-            <div className="song-artist">{audioPlayer.currentSong?.artist || 'Select a playlist'}</div>
-          </div>
-        </div>
-
-        <div className="player-controls-inline">
-          <button
-            className="control-btn"
-            onClick={audioPlayer.playPrevious}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdSkipPrevious size={20} />
-          </button>
-          <button
-            className="control-btn"
-            onClick={() => audioPlayer.seekTo(Math.max(0, audioPlayer.currentTime - 10))}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdFastRewind size={20} />
-          </button>
-          <button
-            className="control-btn play-main"
-            onClick={audioPlayer.togglePlay}
-            disabled={!audioPlayer.currentSong}
-          >
-            {audioPlayer.isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
-          </button>
-          <button
-            className="control-btn"
-            onClick={() => audioPlayer.seekTo(Math.min(audioPlayer.duration, audioPlayer.currentTime + 10))}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdFastForward size={20} />
-          </button>
-          <button
-            className="control-btn"
-            onClick={audioPlayer.playNext}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdSkipNext size={20} />
-          </button>
-        </div>
-
-        <div className="player-center">
-          <div className="progress-bar">
-            <span className="time-current">{formatTime(audioPlayer.currentTime)}</span>
-            <div
-              className="progress-track"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const percentage = x / rect.width;
-                audioPlayer.seekTo(percentage * audioPlayer.duration);
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <div
-                className="progress-fill"
-                style={{
-                  width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%`
-                }}
-              ></div>
+      {/* Music Player UI (uses currentSong from context) */}
+      {currentSong && (
+        <div className="music-player">
+          <div className="player-left">
+            <div className="player-album-art-container">
+              <img
+                src={currentSong.artwork} // Corrected from albumArt
+                alt={currentSong.title}
+                className="player-album-art"
+              />
+              <AudioVisualizer
+                isPlaying={isPlaying}
+              />
             </div>
-            <span className="time-total">{formatTime(audioPlayer.duration)}</span>
+            <div className="player-song-info">
+              <div className="player-song-title">{currentSong.title || 'No Song Playing'}</div>
+              <div className="player-song-artist">{currentSong.artist || 'Select a playlist'}</div>
+            </div>
           </div>
-        </div>
 
-        <div className="player-right">
-          <div className="volume-controls">
-            <EmojiReaction onEmojiSelect={handleEmojiSelect} />
-            <VolumeControl
-              volume={audioPlayer.volume}
-              onVolumeChange={audioPlayer.setVolume}
-              onToggleMute={audioPlayer.toggleMute}
-            />
-            <PlaybackSpeedControl
-              speed={audioPlayer.playbackRate}
-              onChange={audioPlayer.setPlaybackRate}
-            />
+          <div className="player-controls-inline">
             <button
-              className={`volume-btn ${audioPlayer.isRepeat ? 'liked' : ''}`}
-              onClick={audioPlayer.toggleRepeat}
+              className="control-btn"
+              onClick={playPrevious} // Use destructured playPrevious
+              disabled={!currentSong} // Use destructured currentSong
             >
-              <MdRepeat size={18} />
+              <MdSkipPrevious size={20} />
             </button>
             <button
-              className={`volume-btn ${audioPlayer.isShuffle ? 'liked' : ''}`}
-              onClick={audioPlayer.toggleShuffle}
+              className="control-btn"
+              onClick={() => seekTo(Math.max(0, playerTime - 10))} // Use destructured seekTo and playerTime
+              disabled={!currentSong} // Use destructured currentSong
             >
-              <MdShuffle size={18} />
+              <MdFastRewind size={20} />
             </button>
-            <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={toggleLike}>
-              {isCurrentSongLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
+            <button
+              className="control-btn play-main"
+              onClick={togglePlay} // Use destructured togglePlay
+              disabled={!currentSong} // Use destructured currentSong
+            >
+              {isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
             </button>
-            <button className="volume-btn"><MdMoreHoriz size={18} /></button>
+            <button
+              className="control-btn"
+              onClick={() => seekTo(Math.min(playerDuration, playerTime + 10))} // Use destructured seekTo, playerDuration, playerTime
+              disabled={!currentSong} // Use destructured currentSong
+            >
+              <MdFastForward size={20} />
+            </button>
+            <button
+              className="control-btn"
+              onClick={playNext} // Use destructured playNext
+              disabled={!currentSong} // Use destructured currentSong
+            >
+              <MdSkipNext size={20} />
+            </button>
+          </div>
+
+          <div className="player-center">
+            <div className="progress-bar">
+              <span className="time-current">{formatTime(playerTime)}</span> {/* Use destructured playerTime */}
+              <div
+                className="progress-track"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const percentage = x / rect.width;
+                  seekTo(percentage * playerDuration); // Use destructured seekTo and playerDuration
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${playerDuration > 0 ? (playerTime / playerDuration) * 100 : 0}%` // Use destructured playerTime and playerDuration
+                  }}
+                ></div>
+              </div>
+              <span className="time-total">{formatTime(playerDuration)}</span> {/* Use destructured playerDuration */}
+            </div>
+          </div>
+
+          <div className="player-right">
+            <div className="volume-controls">
+              <EmojiReaction onEmojiSelect={handleEmojiSelect} />
+              <VolumeControl
+                volume={volume} // Use destructured volume
+                onVolumeChange={setVolume} // Use destructured setVolume
+                onToggleMute={toggleMute} // Use destructured toggleMute
+              />
+              <PlaybackSpeedControl
+                speed={playbackRate} // Use destructured playbackRate
+                onChange={setPlaybackRate} // Use destructured setPlaybackRate
+              />
+              <button
+                className={`volume-btn ${isRepeat ? 'liked' : ''}`} // Use destructured isRepeat
+                onClick={toggleRepeat} // Use destructured toggleRepeat
+              >
+                <MdRepeat size={18} />
+              </button>
+              <button
+                className={`volume-btn ${isShuffle ? 'liked' : ''}`} // Use destructured isShuffle
+                onClick={toggleShuffle} // Use destructured toggleShuffle
+              >
+                <MdShuffle size={18} />
+              </button>
+              <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={toggleLike}>
+                {isCurrentSongLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
+              </button>
+              <button className="volume-btn"><MdMoreHoriz size={18} /></button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

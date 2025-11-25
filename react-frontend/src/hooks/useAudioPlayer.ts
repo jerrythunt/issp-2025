@@ -88,7 +88,7 @@ export const useAudioPlayer = (): UseAudioPlayerReturn => {
     if (!audioRef.current) return;
 
     const audio = audioRef.current;
-    audio.src = song.audioUrl;
+    audio.src = song.previewUrl;
     audio.load();
     
     setCurrentSong(song);

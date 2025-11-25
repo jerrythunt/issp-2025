@@ -1,43 +1,26 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import './AudioVisualizer.css';
+import { useAudioPlayerContext } from '../context/AudioPlayerContext'; // Import the context hook
 
 interface AudioVisualizerProps {
-  audioElement: HTMLAudioElement | null;
+  // audioElement: HTMLAudioElement | null; // This prop is no longer needed as context provides the audio source
   isPlaying: boolean;
 }
 
-const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ audioElement, isPlaying }) => {
+const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ isPlaying }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
-  const [, setAudioContext] = useState<AudioContext | null>(null);
+
+  // Get audioCtx and analyser from the AudioPlayerContext
+  const { audioRef, analyser, audioCtx } = useAudioPlayerContext();
+
+  // The first useEffect that used to create AudioContext and Analyser is now removed
+  // as they are provided by the context.
+  // The connection of audioElement to analyser is also handled in the AudioPlayerContext.
 
   useEffect(() => {
-    if (!audioElement) return;
-
-    // Create audio context and analyser
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    
-    // Connect audio element to analyser
-    const source = ctx.createMediaElementSource(audioElement);
-    source.connect(analyser);
-    analyser.connect(ctx.destination);
-    
-    setAudioContext(ctx);
-    analyserRef.current = analyser;
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      ctx.close();
-    };
-  }, [audioElement]);
-
-  useEffect(() => {
-    if (!isPlaying || !analyserRef.current || !canvasRef.current) {
+    // Check if analyser, canvas, and isPlaying are available
+    if (!isPlaying || !analyser || !canvasRef.current || !audioCtx) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -46,11 +29,15 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ audioElement, isPlayi
 
     const canvas = canvasRef.current;
     const canvasCtx = canvas.getContext('2d');
-    const analyser = analyserRef.current;
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
     const draw = () => {
+      // Ensure context is not suspended when drawing
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(e => console.error("Error resuming AudioContext in visualizer:", e));
+      }
+
       if (!canvasCtx) return;
 
       animationRef.current = requestAnimationFrame(draw);
@@ -90,8 +77,9 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ audioElement, isPlayi
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      // No need to close audioCtx here as it's managed by the provider
     };
-  }, [isPlaying]);
+  }, [isPlaying, analyser, audioCtx]); // Depend on analyser and audioCtx from context
 
   return (
     <div className="audio-visualizer">
