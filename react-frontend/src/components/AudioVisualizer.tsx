@@ -10,7 +10,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ audioElement, isPlayi
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [, setAudioContext] = useState<AudioContext | null>(null);
 
   useEffect(() => {
     if (!audioElement) return;

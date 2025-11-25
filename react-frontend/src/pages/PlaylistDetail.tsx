@@ -1,132 +1,302 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   MdDashboard, 
-  MdPerson, 
   MdTimeline, 
   MdSettings, 
   MdHelpOutline, 
   MdLogout,
-  MdSkipPrevious,
-  MdSkipNext,
-  MdFastRewind,
-  MdFastForward,
   MdPlayArrow,
   MdPause,
-  MdShuffle,
-  MdFavoriteBorder,
-  MdMoreHoriz,
+  MdArrowBack,
+  MdSkipNext,
+  MdSkipPrevious,
   MdFavorite,
-  MdDelete,
-  MdPlayCircleOutline,
-  MdRepeat
+  MdFavoriteBorder
 } from 'react-icons/md';
+import { auth, db } from '../firebaseConfig';
+import { User, signOut } from 'firebase/auth';
+import { collection, getDocs, doc, addDoc, updateDoc } from 'firebase/firestore';
+import AudioVisualizer from '../components/AudioVisualizer';
 import VolumeControl from '../components/VolumeControl';
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
-import EmojiReaction from '../components/EmojiReaction';
-import { logout } from '../firebaseAuth';
-import { useAudioPlayerContext } from '../context/AudioPlayerContext';
-import { getSongsForGenre, getLikedSongs, isSongLiked, toggleSongLike as toggleSongLikeInLibrary, likeAllSongsInGenre, unlikeAllSongsInGenre, formatTime, Song } from '../data/musicLibrary';
 import './PlaylistDetail.css';
+
+interface Song {
+  id: number;
+  title: string;
+  artist: string;
+  artwork: string;
+  genre: string;
+  previewUrl: string;
+}
+
+interface Playlist {
+  id: string;
+  name: string;
+  songs: Song[];
+}
+
+// iTunes API fetch function
+const fetchSongsByGenre = async (genre: string): Promise<Song[]> => {
+  try {
+    const response = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(genre + " music")}&media=music&entity=song&limit=50`
+    );
+    const data = await response.json();
+    
+    if (!data.results) return [];
+
+    return data.results
+      .filter((track: any) => track.previewUrl)
+      .slice(0, 20)
+      .map((track: any): Song => ({
+        id: track.trackId,
+        title: track.trackName,
+        artist: track.artistName,
+        artwork: track.artworkUrl100.replace("100x100", "300x300"),
+        genre: track.primaryGenreName,
+        previewUrl: track.previewUrl,
+      }));
+  } catch (err) {
+    console.error("iTunes API error:", err);
+    return [];
+  }
+};
 
 const PlaylistDetail: React.FC = () => {
   const navigate = useNavigate();
   const { playlistName } = useParams<{ playlistName: string }>();
-  
-  const isLikedPlaylist = playlistName === 'Liked';
-  
-  const getPlaylistLikedState = () => {
-    const likedPlaylists = localStorage.getItem('likedPlaylists');
-    if (likedPlaylists && playlistName) {
-      const parsed = JSON.parse(likedPlaylists);
-      return parsed[playlistName] ?? isLikedPlaylist;
-    }
-    return isLikedPlaylist;
-  };
-  
-  const [isPlaylistLiked, setIsPlaylistLiked] = useState(() => getPlaylistLikedState());
-  const [songs, setSongs] = useState<Song[]>([]);
-  
-  const audioPlayer = useAudioPlayerContext();
-  
-  const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.7);
+  const [isMuted, setIsMuted] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const [likedSongs, setLikedSongs] = useState<number[]>([]);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    setIsPlaylistLiked(getPlaylistLikedState());
-  }, [playlistName]);
-
-  useEffect(() => {
-    if (playlistName) {
-      let playlistSongs: Song[];
-      
-      if (isLikedPlaylist) {
-        playlistSongs = getLikedSongs();
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser && playlistName) {
+        // Load liked songs
+        try {
+          const likedSongsRef = collection(db, 'users', currentUser.uid, 'likedSongs');
+          const likedDocs = await getDocs(likedSongsRef);
+          const likedIds = likedDocs.docs
+            .filter(doc => !doc.data().deleted)
+            .map(doc => doc.data().id);
+          setLikedSongs(likedIds);
+        } catch (err) {
+          console.error('Failed to load liked songs:', err);
+        }
+        
+        fetchPlaylist(playlistName);
       } else {
-        playlistSongs = getSongsForGenre(playlistName);
+        setLoading(false);
       }
-      
-      setSongs(playlistSongs);
-      audioPlayer.setPlaylist(playlistSongs, playlistName);
-      
-      if (playlistSongs.length > 0 && !audioPlayer.currentSong) {
-        audioPlayer.playSong(playlistSongs[0]);
-      }
-    }
+    });
+
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playlistName]);
 
-  useEffect(() => {
-    if (audioPlayer.currentSong) {
-      setIsCurrentSongLiked(isSongLiked(audioPlayer.currentSong.id));
-    }
-  }, [audioPlayer.currentSong]);
-
-  const togglePlaylistLike = () => {
-    const newLikedState = !isPlaylistLiked;
-    setIsPlaylistLiked(newLikedState);
-    
-    if (playlistName && !isLikedPlaylist && newLikedState) {
-      likeAllSongsInGenre(playlistName);
-    }
-    
-    if (playlistName) {
-      const likedPlaylists = localStorage.getItem('likedPlaylists');
-      const parsed = likedPlaylists ? JSON.parse(likedPlaylists) : {};
-      parsed[playlistName] = newLikedState;
-      localStorage.setItem('likedPlaylists', JSON.stringify(parsed));
+  const fetchPlaylist = async (name: string) => {
+    setLoading(true);
+    try {
+      const decodedName = decodeURIComponent(name);
+      console.log('Fetching playlist:', decodedName);
+      
+      // Check if this is the "Liked Songs" playlist
+      if (decodedName === "Liked Songs") {
+        if (!user) {
+          console.log('No user found for Liked Songs');
+          setLoading(false);
+          return;
+        }
+        // Fetch liked songs from Firestore
+        const likedSongsRef = collection(db, 'users', user.uid, 'likedSongs');
+        const likedDocs = await getDocs(likedSongsRef);
+        console.log('Liked songs docs:', likedDocs.docs.length);
+        const likedSongsData = likedDocs.docs
+          .filter(doc => !doc.data().deleted)
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: data.id,
+              title: data.title,
+              artist: data.artist,
+              artwork: data.artwork,
+              genre: data.genre,
+              previewUrl: data.previewUrl
+            } as Song;
+          })
+          .sort((a, b) => {
+            // Sort by most recently liked if available
+            const aData = likedDocs.docs.find(d => d.data().id === a.id)?.data();
+            const bData = likedDocs.docs.find(d => d.data().id === b.id)?.data();
+            const aTime = aData?.likedAt ? new Date(aData.likedAt).getTime() : 0;
+            const bTime = bData?.likedAt ? new Date(bData.likedAt).getTime() : 0;
+            return bTime - aTime; // Most recent first
+          });
+        
+        console.log('Setting liked songs playlist with', likedSongsData.length, 'songs');
+        setPlaylist({
+          id: 'liked-songs',
+          name: 'Liked Songs',
+          songs: likedSongsData
+        });
+        setLoading(false);
+        return;
+      } else {
+        // Fetch songs for this genre
+        const songs = await fetchSongsByGenre(decodedName);
+        
+        setPlaylist({
+          id: decodedName,
+          name: decodedName,
+          songs: songs
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch playlist:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const togglePlayerLike = () => {
-    if (audioPlayer.currentSong) {
-      const newLikedStatus = toggleSongLikeInLibrary(audioPlayer.currentSong.id);
-      setIsCurrentSongLiked(newLikedStatus);
+  const playSong = (song: Song) => {
+    setCurrentSong(song);
+    setIsPlaying(true);
+  };
+
+  const togglePlayPause = () => {
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const playNext = () => {
+    if (!playlist || !currentSong) return;
+    const currentIndex = playlist.songs.findIndex(s => s.id === currentSong.id);
+    if (currentIndex < playlist.songs.length - 1) {
+      playSong(playlist.songs[currentIndex + 1]);
+    }
+  };
+
+  const playPrevious = () => {
+    if (!playlist || !currentSong) return;
+    const currentIndex = playlist.songs.findIndex(s => s.id === currentSong.id);
+    if (currentIndex > 0) {
+      playSong(playlist.songs[currentIndex - 1]);
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  const toggleLike = async (song: Song) => {
+    if (!user) return;
+    
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const likedSongsRef = collection(userRef, 'likedSongs');
       
-      if (isLikedPlaylist) {
-        setSongs(getLikedSongs());
+      if (likedSongs.includes(song.id)) {
+        // Unlike: remove from state
+        setLikedSongs(likedSongs.filter(id => id !== song.id));
+        // Remove from Firestore
+        const likedDocs = await getDocs(likedSongsRef);
+        const songDoc = likedDocs.docs.find(doc => doc.data().id === song.id);
+        if (songDoc) {
+          await updateDoc(doc(db, 'users', user.uid, 'likedSongs', songDoc.id), {
+            deleted: true
+          });
+        }
+        // If we're on the Liked Songs page, refresh the playlist
+        if (playlist?.id === 'liked-songs') {
+          setPlaylist({
+            ...playlist,
+            songs: playlist.songs.filter(s => s.id !== song.id)
+          });
+        }
+      } else {
+        // Like: add to state
+        setLikedSongs([...likedSongs, song.id]);
+        // Add to Firestore
+        await addDoc(likedSongsRef, {
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          artwork: song.artwork,
+          genre: song.genre,
+          previewUrl: song.previewUrl,
+          likedAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed]);
+
+  useEffect(() => {
+    if (currentSong && audioRef.current) {
+      audioRef.current.src = currentSong.previewUrl;
+      if (isPlaying) {
+        audioRef.current.play().catch(err => {
+          console.error("Audio playback error:", err);
+          setIsPlaying(false);
+        });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSong]);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate('/');
   };
 
-  const toggleSongLike = (songId: string) => {
-    toggleSongLikeInLibrary(songId);
-    
-    setSongs(songs.map(song => 
-      song.id === songId ? { ...song } : song
-    ));
-  };
+  if (loading) {
+    return (
+      <div className="playlist-detail">
+        <div className="main-content">Loading playlist...</div>
+      </div>
+    );
+  }
 
-  const handleEmojiSelect = (emoji: string) => {
-    if (audioPlayer.currentSong) {
-      const timelineEntry = {
-        song: audioPlayer.currentSong,
-        emoji,
-        timestamp: new Date().toISOString(),
-        songTimestamp: audioPlayer.currentTime,
-      };
-      const existingTimeline = JSON.parse(localStorage.getItem('timeline') || '[]');
-      localStorage.setItem('timeline', JSON.stringify([...existingTimeline, timelineEntry]));
-    }
-  };
+  if (!playlist) {
+    return (
+      <div className="playlist-detail">
+        <div className="main-content">
+          <p>Playlist not found</p>
+          <button onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="playlist-detail">
@@ -149,10 +319,6 @@ const PlaylistDetail: React.FC = () => {
               <span className="nav-icon"><MdDashboard /></span>
               <span>Dashboard</span>
             </div>
-            <div className="nav-item" onClick={() => alert('Profile page coming soon!')} style={{ cursor: 'pointer' }}>
-              <span className="nav-icon"><MdPerson /></span>
-              <span>Profile</span>
-            </div>
             <div className="nav-item" onClick={() => navigate('/timeline')} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
@@ -172,209 +338,155 @@ const PlaylistDetail: React.FC = () => {
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
             </div>
-            <div className="nav-item" onClick={async () => {
-              await logout();
-              navigate('/');
-            }} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={handleLogout} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdLogout /></span>
               <span>Log out</span>
             </div>
           </nav>
         </div>
 
-        <button className="change-genre-btn" onClick={() => navigate('/dashboard')}>
-          Change Genre
-        </button>
-
         <div className="version-info">version 5.5.1</div>
       </aside>
 
       <main className="playlist-content">
         <div className="playlist-header">
-          <h1 className="playlist-title">{playlistName || 'Playlist Title'}</h1>
-          <div className="playlist-actions">
-            <button 
-              className="play-all-btn"
-              onClick={() => {
-                if (songs.length > 0) {
-                  audioPlayer.playSong(songs[0]);
-                }
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <MdPlayCircleOutline size={48} />
-            </button>
-            <button className={`like-playlist-btn ${isPlaylistLiked ? 'liked' : ''}`} onClick={togglePlaylistLike}>
-              {isPlaylistLiked ? <MdFavorite size={48} /> : <MdFavoriteBorder size={48} />}
-            </button>
-          </div>
+          <button 
+            className="back-btn"
+            onClick={() => navigate('/dashboard')}
+            style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <MdArrowBack /> Back to Dashboard
+          </button>
+          <h1 className="playlist-title">{playlist.name}</h1>
+          <p style={{ color: '#666', marginTop: '0.5rem' }}>
+            {playlist.songs.length} {playlist.songs.length === 1 ? 'song' : 'songs'}
+          </p>
         </div>
 
-        <div className="songs-list">
-          {songs.length === 0 ? (
+        <div className="songs-section">
+          {playlist.songs.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
-              {isLikedPlaylist ? 'No liked songs yet. Like some songs to see them here!' : 'No songs available for this genre.'}
+              No songs in this playlist yet.
             </div>
           ) : (
-            songs.map((song) => (
-              <div 
-                key={song.id} 
-                className="song-item"
-                onClick={() => audioPlayer.playSong(song)}
-                style={{ cursor: 'pointer' }}
-              >
+            <div className="playlists-grid">
+              {playlist.songs.map((song) => (
                 <div 
-                  className="song-album-art"
-                  style={{ 
-                    backgroundImage: song.albumArt ? `url(${song.albumArt})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center'
-                  }}
-                ></div>
-                <div className="song-details">
-                  <div className="song-title-large">{song.title}</div>
-                  <div className="song-artist-large">{song.artist}</div>
+                  key={song.id} 
+                  className="playlist-card song-card"
+                >
+                  <div className="song-card-image-wrapper" onClick={() => playSong(song)}>
+                    <img 
+                      src={song.artwork}
+                      alt={song.title}
+                      className="song-card-image"
+                    />
+                    <div className="song-card-play-overlay">
+                      <MdPlayArrow color="#fff" size={32} />
+                    </div>
+                  </div>
+                  <div className="song-card-info">
+                    <h4 className="song-card-title">{song.title}</h4>
+                    <p className="song-card-artist">{song.artist}</p>
+                    <p className="song-card-genre">{song.genre}</p>
+                    <button 
+                      className="song-like-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLike(song);
+                      }}
+                    >
+                      {likedSongs.includes(song.id) ? 
+                        <MdFavorite size={20} color="#ED6F3A" /> : 
+                        <MdFavoriteBorder size={20} color="#666" />
+                      }
+                    </button>
+                  </div>
                 </div>
-                <button 
-                  className={`song-action-btn ${isSongLiked(song.id) ? 'liked' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSongLike(song.id);
-                  }}
-                >
-                  {isSongLiked(song.id) ? <MdFavorite size={42} /> : <MdFavoriteBorder size={42} />}
-                </button>
-                <button 
-                  className="song-action-btn delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isLikedPlaylist) {
-                      toggleSongLike(song.id);
-                    } else {
-                      alert('Remove from playlist feature coming soon!');
-                    }
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
-                    <path d="M16 18V30M20 18V30M24 18V30M28 18V30M12 14H30M26 14V12C26 11.4696 25.7893 10.9609 25.4142 10.5858C25.0391 10.2107 24.5304 10 24 10H18C17.4696 10 16.9609 10.2107 16.5858 10.5858C16.2107 10.9609 16 11.4696 16 12V14" stroke="#1D1B20" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       </main>
 
-      <div className="music-player">
-        <div className="player-left">
-          <div 
-            className="album-art"
-            style={{ 
-              backgroundImage: audioPlayer.currentSong?.albumArt ? `url(${audioPlayer.currentSong.albumArt})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          ></div>
-          <div className="song-info">
-            <div className="song-title">{audioPlayer.currentSong?.title || 'No Song Playing'}</div>
-            <div className="song-artist">{audioPlayer.currentSong?.artist || 'Select a song'}</div>
-          </div>
-        </div>
-
-        <div className="player-controls-inline">
-          <button 
-            className="control-btn" 
-            onClick={audioPlayer.playPrevious}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdSkipPrevious size={20} />
-          </button>
-          <button 
-            className="control-btn"
-            onClick={() => audioPlayer.seekTo(Math.max(0, audioPlayer.currentTime - 10))}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdFastRewind size={20} />
-          </button>
-          <button 
-            className="control-btn play-main" 
-            onClick={audioPlayer.togglePlay}
-            disabled={!audioPlayer.currentSong}
-          >
-            {audioPlayer.isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
-          </button>
-          <button 
-            className="control-btn"
-            onClick={() => audioPlayer.seekTo(Math.min(audioPlayer.duration, audioPlayer.currentTime + 10))}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdFastForward size={20} />
-          </button>
-          <button 
-            className="control-btn" 
-            onClick={audioPlayer.playNext}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdSkipNext size={20} />
-          </button>
-        </div>
-
-        <div className="player-center">
-          <div className="progress-bar">
-            <span className="time-current">{formatTime(audioPlayer.currentTime)}</span>
-            <div 
-              className="progress-track"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const percentage = x / rect.width;
-                audioPlayer.seekTo(percentage * audioPlayer.duration);
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <div 
-                className="progress-fill"
-                style={{ 
-                  width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%` 
-                }}
-              ></div>
+      {/* Music Player */}
+      {currentSong && (
+        <div className="music-player">
+          <div className="player-left">
+            <div className="player-album-art-container">
+              <img 
+                src={currentSong.artwork} 
+                alt={currentSong.title}
+                className="player-album-art"
+              />
+              <AudioVisualizer 
+                audioElement={audioRef.current} 
+                isPlaying={isPlaying} 
+              />
             </div>
-            <span className="time-total">{formatTime(audioPlayer.duration)}</span>
+            <div className="player-song-info">
+              <div className="player-song-title">{currentSong.title}</div>
+              <div className="player-song-artist">{currentSong.artist}</div>
+            </div>
           </div>
-        </div>
 
-        <div className="player-right">
-          <div className="volume-controls">
-            <EmojiReaction onEmojiSelect={handleEmojiSelect} />
-            <VolumeControl
-              volume={audioPlayer.volume}
-              onVolumeChange={audioPlayer.setVolume}
-              onToggleMute={audioPlayer.toggleMute}
-            />
-            <PlaybackSpeedControl
-              speed={audioPlayer.playbackRate}
-              onChange={audioPlayer.setPlaybackRate}
-            />
+          <div className="player-controls-inline">
             <button 
-              className={`volume-btn ${audioPlayer.isRepeat ? 'liked' : ''}`}
-              onClick={audioPlayer.toggleRepeat}
+              className="control-btn" 
+              onClick={playPrevious}
+              disabled={!playlist || playlist.songs.findIndex(s => s.id === currentSong.id) === 0}
             >
-              <MdRepeat size={18} />
+              <MdSkipPrevious size={20} />
             </button>
             <button 
-              className={`volume-btn ${audioPlayer.isShuffle ? 'liked' : ''}`}
-              onClick={audioPlayer.toggleShuffle}
+              className="control-btn control-btn-play" 
+              onClick={togglePlayPause}
             >
-              <MdShuffle size={18} />
+              {isPlaying ? <MdPause size={24} /> : <MdPlayArrow size={24} />}
             </button>
-            <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={togglePlayerLike}>
-              {isCurrentSongLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
+            <button 
+              className="control-btn" 
+              onClick={playNext}
+              disabled={!playlist || playlist.songs.findIndex(s => s.id === currentSong.id) === playlist.songs.length - 1}
+            >
+              <MdSkipNext size={20} />
             </button>
-            <button className="volume-btn"><MdMoreHoriz size={18} /></button>
+          </div>
+
+          <div className="player-center">
+            <div className="progress-bar">
+              <span className="time-current">0:00</span>
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: '0%' }}></div>
+              </div>
+              <span className="time-total">0:30</span>
+            </div>
+          </div>
+
+          <div className="player-right">
+            <div className="volume-controls">
+              <VolumeControl
+                volume={volume}
+                onVolumeChange={setVolume}
+                onToggleMute={toggleMute}
+              />
+              <PlaybackSpeedControl
+                speed={playbackSpeed}
+                onChange={setPlaybackSpeed}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Audio Element */}
+      <audio 
+        ref={audioRef}
+        style={{ display: 'none' }}
+        crossOrigin="anonymous"
+        preload="auto"
+        onEnded={playNext}
+      />
     </div>
   );
 };

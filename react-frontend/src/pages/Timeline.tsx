@@ -2,92 +2,93 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MdDashboard, 
-  MdPerson, 
   MdTimeline, 
   MdSettings, 
   MdHelpOutline, 
-  MdLogout,
-  MdSkipPrevious,
-  MdSkipNext,
-  MdFastRewind,
-  MdFastForward,
-  MdPlayArrow,
-  MdPause,
-  MdShuffle,
-  MdFavoriteBorder,
-  MdFavorite,
-  MdMoreHoriz,
-  MdRepeat
+  MdLogout
 } from 'react-icons/md';
-import VolumeControl from '../components/VolumeControl';
-import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
-import EmojiReaction from '../components/EmojiReaction';
-import { logout } from '../firebaseAuth';
-import { useAudioPlayerContext } from '../context/AudioPlayerContext';
-import { isSongLiked, toggleSongLike, formatTime } from '../data/musicLibrary';
+import { auth, db } from '../firebaseConfig';
+import { User, signOut } from 'firebase/auth';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import './Timeline.css';
 
 interface TimelineEntry {
-  song: {
-    id: string;
-    title: string;
-    artist: string;
-    albumArt?: string;
-  };
+  id: string;
+  songId: number;
+  title: string;
+  artist: string;
+  artwork?: string;
   emoji: string;
-  timestamp: string;
-  songTimestamp: number;
+  timestamp: number;
+  listenedAt: Date;
+  day: number;
+  month: number;
+  year: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  moods?: string[];
 }
 
 const Timeline: React.FC = () => {
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
-  const audioPlayer = useAudioPlayerContext();
-  const [isCurrentSongLiked, setIsCurrentSongLiked] = useState(false);
 
   useEffect(() => {
-    const storedTimeline = localStorage.getItem('timeline');
-    if (storedTimeline) {
-      setTimelineEntries(JSON.parse(storedTimeline));
-    }
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        fetchTimeline(currentUser.uid);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (audioPlayer.currentSong) {
-      setIsCurrentSongLiked(isSongLiked(audioPlayer.currentSong.id));
-    }
-  }, [audioPlayer.currentSong]);
-
-  const toggleLike = () => {
-    if (audioPlayer.currentSong) {
-      const newLikedStatus = toggleSongLike(audioPlayer.currentSong.id);
-      setIsCurrentSongLiked(newLikedStatus);
-    }
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    if (audioPlayer.currentSong) {
-      const timelineEntry = {
-        song: audioPlayer.currentSong,
-        emoji,
-        timestamp: new Date().toISOString(),
-        songTimestamp: audioPlayer.currentTime,
-      };
-      const existingTimeline = JSON.parse(localStorage.getItem('timeline') || '[]');
-      localStorage.setItem('timeline', JSON.stringify([...existingTimeline, timelineEntry]));
-      setTimelineEntries(prevEntries => [...prevEntries, timelineEntry]);
+  const fetchTimeline = async (uid: string) => {
+    try {
+      const historyRef = collection(db, "users", uid, "moodHistory");
+      const q = query(historyRef, orderBy("listenedAt", "desc"));
+      const snapshot = await getDocs(q);
+      
+      const entries: TimelineEntry[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        listenedAt: doc.data().listenedAt?.toDate() || new Date(),
+      })) as TimelineEntry[];
+      
+      setTimelineEntries(entries);
+    } catch (err) {
+      console.error("Failed to fetch timeline:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatFullTimestamp = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleString(undefined, {
+  const formatFullTimestamp = (date: Date | number) => {
+    const d = typeof date === 'number' ? new Date(date) : date;
+    return d.toLocaleString(undefined, {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
       hour: 'numeric',
       minute: 'numeric',
     });
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate('/');
   };
 
   const getEmojiColorClass = (emoji: string) => {
@@ -126,10 +127,6 @@ const Timeline: React.FC = () => {
               <span className="nav-icon"><MdDashboard /></span>
               <span>Dashboard</span>
             </div>
-            <div className="nav-item" onClick={() => alert('Profile page coming soon!')} style={{ cursor: 'pointer' }}>
-              <span className="nav-icon"><MdPerson /></span>
-              <span>Profile</span>
-            </div>
             <div className="nav-item active">
               <span className="nav-icon"><MdTimeline /></span>
               <span>Timeline</span>
@@ -149,10 +146,7 @@ const Timeline: React.FC = () => {
               <span className="nav-icon"><MdHelpOutline /></span>
               <span>FAQs</span>
             </div>
-            <div className="nav-item" onClick={async () => {
-              await logout();
-              navigate('/');
-            }} style={{ cursor: 'pointer' }}>
+            <div className="nav-item" onClick={handleLogout} style={{ cursor: 'pointer' }}>
               <span className="nav-icon"><MdLogout /></span>
               <span>Log out</span>
             </div>
@@ -170,136 +164,43 @@ const Timeline: React.FC = () => {
 
       <main className="main-content">
         <h1>Timeline</h1>
-        <div className="timeline-entries">
-          {timelineEntries.length > 0 ? (
-            timelineEntries.map((entry, index) => (
-              <div key={index} className={`timeline-entry ${getEmojiColorClass(entry.emoji)}`}>
+        {loading ? (
+          <p>Loading timeline...</p>
+        ) : timelineEntries.length > 0 ? (
+          <div className="timeline-entries">
+            {timelineEntries.map((entry) => (
+              <div key={entry.id} className={`timeline-entry ${getEmojiColorClass(entry.emoji)}`}>
                 <div className="timeline-song-info">
+                  {entry.artwork && (
+                    <img 
+                      src={entry.artwork} 
+                      alt={entry.title}
+                      className="timeline-album-art"
+                      style={{ width: '60px', height: '60px', borderRadius: '8px', marginRight: '16px' }}
+                    />
+                  )}
                   <div>
-                    <p className="timeline-song-title">{entry.song.title}</p>
-                    <p className="timeline-song-artist">{entry.song.artist}</p>
-                    <p className="timeline-song-timestamp">{formatTime(entry.songTimestamp)}</p>
+                    <p className="timeline-song-title">{entry.title}</p>
+                    <p className="timeline-song-artist">{entry.artist}</p>
+                    <p className="timeline-song-timestamp">{formatTime(entry.timestamp)}</p>
+                    {entry.moods && entry.moods.length > 0 && (
+                      <p className="timeline-moods">
+                        {entry.moods.map((mood, i) => (
+                          <span key={i} className="mood-tag">{mood}</span>
+                        ))}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <p className="timeline-emoji">{entry.emoji}</p>
-                <p className="timeline-timestamp">{formatFullTimestamp(entry.timestamp)}</p>
+                <p className="timeline-timestamp">{formatFullTimestamp(entry.listenedAt)}</p>
               </div>
-            ))
-          ) : (
-            <p>No timeline entries yet.</p>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p>No timeline entries yet. Start listening to music and reacting with emojis!</p>
+        )}
       </main>
-
-      <div className="music-player">
-        <div className="player-left">
-          <div 
-            className="album-art" 
-            style={{ 
-              backgroundImage: audioPlayer.currentSong?.albumArt ? `url(${audioPlayer.currentSong.albumArt})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          ></div>
-          <div className="song-info">
-            <div className="song-title">{audioPlayer.currentSong?.title || 'No Song Playing'}</div>
-            <div className="song-artist">{audioPlayer.currentSong?.artist || 'Select a playlist'}</div>
-          </div>
-        </div>
-
-        <div className="player-controls-inline">
-          <button 
-            className="control-btn" 
-            onClick={audioPlayer.playPrevious}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdSkipPrevious size={20} />
-          </button>
-          <button 
-            className="control-btn" 
-            onClick={() => audioPlayer.seekTo(Math.max(0, audioPlayer.currentTime - 10))}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdFastRewind size={20} />
-          </button>
-          <button 
-            className="control-btn play-main" 
-            onClick={audioPlayer.togglePlay}
-            disabled={!audioPlayer.currentSong}
-          >
-            {audioPlayer.isPlaying ? <MdPause size={18} /> : <MdPlayArrow size={18} />}
-          </button>
-          <button 
-            className="control-btn"
-            onClick={() => audioPlayer.seekTo(Math.min(audioPlayer.duration, audioPlayer.currentTime + 10))}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdFastForward size={20} />
-          </button>
-          <button 
-            className="control-btn" 
-            onClick={audioPlayer.playNext}
-            disabled={!audioPlayer.currentSong}
-          >
-            <MdSkipNext size={20} />
-          </button>
-        </div>
-
-        <div className="player-center">
-          <div className="progress-bar">
-            <span className="time-current">{formatTime(audioPlayer.currentTime)}</span>
-            <div 
-              className="progress-track"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const percentage = x / rect.width;
-                audioPlayer.seekTo(percentage * audioPlayer.duration);
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <div 
-                className="progress-fill"
-                style={{ 
-                  width: `${audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0}%` 
-                }}
-              ></div>
-            </div>
-            <span className="time-total">{formatTime(audioPlayer.duration)}</span>
-          </div>
-        </div>
-
-        <div className="player-right">
-          <div className="volume-controls">
-            <EmojiReaction onEmojiSelect={handleEmojiSelect} />
-            <VolumeControl
-              volume={audioPlayer.volume}
-              onVolumeChange={audioPlayer.setVolume}
-              onToggleMute={audioPlayer.toggleMute}
-            />
-            <PlaybackSpeedControl
-              speed={audioPlayer.playbackRate}
-              onChange={audioPlayer.setPlaybackRate}
-            />
-            <button 
-              className={`volume-btn ${audioPlayer.isRepeat ? 'liked' : ''}`}
-              onClick={audioPlayer.toggleRepeat}
-            >
-              <MdRepeat size={18} />
-            </button>
-            <button 
-              className={`volume-btn ${audioPlayer.isShuffle ? 'liked' : ''}`}
-              onClick={audioPlayer.toggleShuffle}
-            >
-              <MdShuffle size={18} />
-            </button>
-            <button className={`volume-btn ${isCurrentSongLiked ? 'liked' : ''}`} onClick={toggleLike}>
-              {isCurrentSongLiked ? <MdFavorite size={18} /> : <MdFavoriteBorder size={18} />}
-            </button>
-            <button className="volume-btn"><MdMoreHoriz size={18} /></button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
