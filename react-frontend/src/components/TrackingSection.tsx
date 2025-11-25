@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-
+import Carousel from './Carousel';
 interface ImageState {
   elderly: boolean;
   headphones: boolean;
@@ -47,39 +47,7 @@ const TrackingSection: React.FC = () => {
       <div className="section-container">
         <div className="section-content-layout">
           <div>
-            <h2 className="section-title">Tracking Mood</h2>
-            <p className="section-text">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor 
-              incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis 
-              nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-            </p>
-            
-            <div className="image-grid">
-              <div className="image-container">
-                {renderImage(
-                  "/assets/images/elderly-man 1.png",
-                  "Elderly man",
-                  "elderly",
-                  "Elderly man"
-                )}
-              </div>
-              <div className="image-container">
-                {renderImage(
-                  "/assets/images/senior-enjoying-music-headphones 1.png",
-                  "Senior with headphones",
-                  "headphones",
-                  "Senior with headphones"
-                )}
-              </div>
-              <div className="image-container">
-                {renderImage(
-                  "/assets/images/elderly-woman 1.png",
-                  "Elderly woman",
-                  "woman",
-                  "Elderly woman"
-                )}
-              </div>
-            </div>
+            <Carousel />
           </div>
         </div>
       </div>
