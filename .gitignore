@@ -1,3 +1,4 @@
 Backend/serviceAccountKey.json
 **/__pycache__/
-.DS_Store
+.DS_Storenode_modules/
+.cache/
