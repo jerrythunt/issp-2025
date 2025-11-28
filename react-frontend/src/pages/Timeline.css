@@ -1,3 +1,4 @@
+
 .timeline {
   display: flex;
   min-height: 100vh;
@@ -74,4 +75,47 @@
 .timeline-timestamp {
   color: #777;
   font-size: 0.8rem;
+}
+
+@media (max-width: 1200px) {
+  .main-content {
+    margin-left: 260px;
+    padding: 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1.5rem 1rem;
+  }
+
+  .timeline-entry {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .timeline-emoji {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 1rem 0.5rem;
+  }
+
+  .timeline-song-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .timeline-album-art {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
 }

@@ -68,3 +68,18 @@
 .dashboard-sidenav { grid-row: 1 / span 3; }
 .dashboard-main { padding: 20px; }
 .dashboard-player { grid-column: 1 / -1; }
+
+@media (max-width: 767px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+  .dashboard-sidenav {
+    grid-row: 1 / span 3;
+    /* You might want to hide the sidenav or change its display for smaller screens */
+    /* For this request, we are just ensuring it spans all rows if visible */
+  }
+  .dashboard-main {
+    grid-column: 1 / -1;
+  }
+}

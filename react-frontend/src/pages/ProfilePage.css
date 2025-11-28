@@ -179,21 +179,6 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 1400px) {
-  .profile-content {
-    padding: 130px 100px 104px 100px;
-  }
-}
-
-@media (max-width: 1024px) {
-  .profile-content {
-    padding: 100px 50px 104px 50px;
-  }
-  
-  .music-tiles {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
 @media (max-width: 768px) {
   .profile-content {

@@ -217,7 +217,7 @@ const Signup: React.FC = () => {
                 onChange={handleChange}
               />
               <label htmlFor="agreedToTerms" className="terms-label">
-                I agree to the <a href="/terms">Terms and Conditions</a>.
+                I agree to the <a href="https://braintest.com/terms/">Terms and Conditions</a>.
               </label>
             </div>
           </div>
