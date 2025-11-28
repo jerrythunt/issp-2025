@@ -38,12 +38,28 @@ const Header: React.FC = () => {
     navigate('/dashboard');
   };
 
+  // Show navbar on landing page and all footer pages
+  const footerPages = [
+    '/',
+    '/about',
+    '/blog',
+    '/team',
+    '/science',
+    '/knowledge-center',
+    '/contact',
+    '/follow-us'
+  ];
+
+  if (!footerPages.includes(location.pathname)) {
+    return null;
+  }
+
   return (
     <Navbar expand="lg" className="navbar fixed-navbar">
       <Container fluid className="px-5">
         <Navbar.Brand
           className="navbar-brand d-flex align-items-center"
-          style={{ cursor: 'pointer', marginLeft: '80px' }}
+          style={{ cursor: 'pointer', marginLeft: '-10px' }}
           onClick={handleLogoClick}
         >
           <img
@@ -65,7 +81,7 @@ const Header: React.FC = () => {
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav
             className="ms-auto d-flex align-items-center"
-            style={{ marginRight: '80px' }}
+            style={{ marginRight: '-10px' }}
           >
             {user ? (
               <>
