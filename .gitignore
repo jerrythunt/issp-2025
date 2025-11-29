@@ -1,3 +1,11 @@
 Backend/serviceAccountKey.json
 **/__pycache__/
+<<<<<<< HEAD
 .DS_Store
+=======
+.DS_Storenode_modules/
+.cache/
+node_modules/
+**/node_modules/
+**/.cache/
+>>>>>>> feature/frontend-dashboard

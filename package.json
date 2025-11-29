@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.9.4"
+  },
+  "scripts": {
+    "start": "cd react-frontend && npm start"
+  }
+}
