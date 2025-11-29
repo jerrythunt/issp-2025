@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Signup.css';
 import { useNavigate } from 'react-router-dom';
-import { signUp, signInWithGoogle, signInAnonymously } from '../firebaseAuth';
+import { signUp, signInWithGoogle } from '../firebaseAuth';
 import { db } from '../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
 

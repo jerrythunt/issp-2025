@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   MdDashboard, 
   MdTimeline, 
-  MdSettings, 
   MdHelpOutline, 
   MdLogout,
   MdPlayArrow, // Added for audio player UI
@@ -17,7 +16,6 @@ import {
   MdMoreHoriz, // Added for audio player UI
   MdPerson,    // Added for Profile link
   MdMenu, // Added for hamburger menu
-  MdClose // Added for hamburger menu
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
@@ -66,7 +64,6 @@ const Timeline: React.FC = () => {
     playbackRate,
     isRepeat,
     isShuffle,
-    audioRef,
     togglePlay,
     playNext,
     playPrevious,
@@ -76,7 +73,6 @@ const Timeline: React.FC = () => {
     setPlaybackRate,
     toggleShuffle,
     toggleRepeat,
-    setPlaylist, // Destructure setPlaylist for consistency
   } = useAudioPlayerContext();
 
   useEffect(() => {

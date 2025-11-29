@@ -426,7 +426,7 @@ const Dashboard: React.FC = () => {
       </aside>
 
       <main className="main-content">
-        <button className={`sidenav-toggle ${isSidenavOpen ? 'shifted' : ''}`}  onClick={() => setIsSidenavOpen(!isSidenavOpen)}>
+        <button className={`sidenav-toggle ${isSidenavOpen ? 'shifted' : ''}`} onClick={() => setIsSidenavOpen(!isSidenavOpen)}>
           <MdMenu size={24} />
         </button>
         <div className="dashboard-header">
@@ -756,7 +756,6 @@ const Dashboard: React.FC = () => {
               </button>
               <button 
                 className="volume-btn" 
-                onClick={() => setShowAddToPlaylistModal(true)}
                 title="Add to playlist"
               >
                 <MdMoreHoriz size={18} />

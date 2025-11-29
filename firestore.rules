@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== Helpers =====
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(id)  { return isSignedIn() && request.auth.uid == id; }
+    function getRoles() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles
+        : {};
+    }
+    function hasRole(role) { return isSignedIn() && getRoles().keys().hasAny([role]); }
+
+    // ===== Schema checks (light) =====
+    function isPlaylist(pl) {
+      return pl.name is string
+        && (!("songs" in pl) || pl.songs is list);
+    }
+    function isPlayHistory(ph) {
+      return (ph.songId is string)
+        && (ph.playedAt is timestamp)
+        && (!("duration" in ph) || ph.duration is number);
+    }
+
+    // ===== Users collection =====
+    match /users/{userId} {
+      // Allow new users to create their own document
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      // Allow reading/updating/deleting their own document
+      allow read, update, delete: if isSignedIn() && request.auth.uid == userId;
+
+      // Admins can read/write any user document
+      allow read, update, delete: if hasRole('admin');
+
+      // ===== Playlists subcollection =====
+      match /playlists/{playlistId} {
+        allow create, read, update, delete: if isOwner(userId) || hasRole('admin');
+      }
+
+      // ===== Mood history subcollection =====
+      match /moodHistory/{historyId} {
+        allow create, read: if isOwner(userId) || hasRole('admin');
+        allow update, delete: if false;  // users cannot modify/delete moods
+      }
+
+      // ===== Liked Songs subcollection =====
+      match /likedSongs/{songId} {
+        allow create, read, update, delete: if isOwner(userId) || hasRole('admin');
+      }
+    }
+
+    // ===== musicLibrary (top-level, read-only to clients; write by admins only) =====
+    match /musicLibrary/{songId} {
+      allow get, list: if true; // public read
+      allow create, update, delete: if hasRole('admin');
+    }
+  }
+}

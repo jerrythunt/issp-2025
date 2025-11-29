@@ -109,7 +109,7 @@ export const AudioPlayerProvider: React.FC<React.PropsWithChildren<unknown>> = (
         currentAudioContext.close(); // Close AudioContext on unmount
       }
     };
-  }, []); // Run only once on mount to initialize audio element and context
+  }, [ playbackRate ]); // Run only once on mount to initialize audio element and context
 
   // Effect to synchronize audio element volume with state
   useEffect(() => {
