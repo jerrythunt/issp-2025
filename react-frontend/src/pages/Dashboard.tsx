@@ -1,10 +1,8 @@
-// Dashboard with iTunes Integration
-import React, { useState, useEffect } from 'react'; // Removed useRef
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   MdDashboard, 
   MdTimeline, 
-  MdSettings, 
   MdHelpOutline, 
   MdLogout,
   MdPlayArrow,
@@ -34,11 +32,8 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import './Dashboard.css';
-import { useAudioPlayerContext } from '../context/AudioPlayerContext'; // Corrected Import path for useAudioPlayer
-import { Song } from '../data/musicLibrary'; // Import Song interface from musicLibrary
-
-const MOODS = ["Happy", "Sad", "Energetic", "Calm", "Angry", "Romantic"];
-
+import { useAudioPlayerContext } from '../context/AudioPlayerContext';
+import { Song } from '../data/musicLibrary';
 
 interface Playlist {
   id: string;
@@ -58,7 +53,6 @@ const fetchSongsByGenre = async (genre: string, excludeIds: number[] = []): Prom
       (track: any) => !excludeIds.includes(track.trackId)
     );
 
-    // Shuffle
     for (let i = filtered.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
@@ -87,7 +81,6 @@ const Dashboard: React.FC = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [error, setError] = useState("");
   const [shownSongIds, setShownSongIds] = useState<Record<string, number[]>>({});
-  const [mood, setMood] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Song[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -96,7 +89,6 @@ const Dashboard: React.FC = () => {
   const [songToAdd, setSongToAdd] = useState<Song | null>(null);
   const [newPlaylistNameModal, setNewPlaylistNameModal] = useState("");
 
-  // Use AudioPlayerContext
   const {
     currentSong,
     isPlaying,
@@ -107,7 +99,6 @@ const Dashboard: React.FC = () => {
     isRepeat,
     isShuffle,
     currentPlaylist,
-    audioRef, // Access audioRef (HTMLAudioElement) from context
     playSong,
     togglePlay,
     playNext,
@@ -118,14 +109,12 @@ const Dashboard: React.FC = () => {
     setPlaybackRate,
     toggleShuffle,
     toggleRepeat,
-    setPlaylist, // Destructure setPlaylist from context
+    setPlaylist,
   } = useAudioPlayerContext();
-
 
   const [likedSongs, setLikedSongs] = useState<number[]>([]);
   const [likedSongsPlaylist, setLikedSongsPlaylist] = useState<Song[]>([]);
 
-  // Auth
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (!currentUser) navigate("/");
@@ -134,7 +123,6 @@ const Dashboard: React.FC = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Fetch user data and liked songs
   useEffect(() => {
     if (!user) return;
     const fetchUserData = async () => {
@@ -147,7 +135,6 @@ const Dashboard: React.FC = () => {
             data.name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || user.email?.split('@')[0] || "User"
           );
           if (!data.preferences || data.preferences.length < 3) {
-            // Only redirect once, don't keep redirecting
             setLoading(false);
             navigate('/profile', { replace: true });
             return;
@@ -155,13 +142,11 @@ const Dashboard: React.FC = () => {
           setUserPreferences(data.preferences);
         } else {
           setName(user.email?.split('@')[0] || "User");
-          // New user - redirect to profile
           setLoading(false);
           navigate('/profile', { replace: true });
           return;
         }
 
-        // Fetch liked songs (IDs and full data)
         const likedSongsRef = collection(db, 'users', user.uid, 'likedSongs');
         const likedDocs = await getDocs(likedSongsRef);
         const filteredDocs = likedDocs.docs.filter(doc => !doc.data().deleted);
@@ -190,26 +175,6 @@ const Dashboard: React.FC = () => {
     fetchUserData();
   }, [user, navigate]);
 
-  // Fetch playlists - commented out to use genre-based playlists instead
-  // const fetchUserPlaylists = async () => {
-  //   if (!user) return;
-  //   try {
-  //     const response = await fetch(`http://localhost:8888/api/music/user/${user.uid}/playlists`);
-  //     if (response.ok) {
-  //       const data = await response.json();
-  //       setPlaylists(data);
-  //     }
-  //   } catch (err) {
-  //     console.error('Failed to fetch playlists:', err);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   fetchUserPlaylists();
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [user]);
-
-  // Fetch songs
   const fetchAllSongs = async () => {
     if (userPreferences.length === 0) return;
 
@@ -223,7 +188,6 @@ const Dashboard: React.FC = () => {
       newShownIds[genre] = [...genreShownIds, ...genreSongs.map((s) => s.id)];
       allSongs = allSongs.concat(genreSongs);
       
-      // Create genre-based playlist
       if (genreSongs.length > 0) {
         genrePlaylists.push({
           id: genre,
@@ -242,10 +206,8 @@ const Dashboard: React.FC = () => {
     if (userPreferences.length > 0) {
       fetchAllSongs();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userPreferences]);
 
-  // Search
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
@@ -282,62 +244,20 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Play song
   const handlePlaySong = (song: Song, playlist: Song[] = []) => {
-    console.log('Playing song:', song.title, 'by', song.artist);
-    console.log('Preview URL:', song.previewUrl);
-    setSongToAdd(song); // Still needed for add to playlist modal
-    setPlaylist(playlist); // Set the playlist in the context BEFORE playing the song
-    playSong(song, playlist); // Use context's playSong
+    setSongToAdd(song);
+    setPlaylist(playlist);
+    playSong(song, playlist);
   };
 
-  // Play a playlist
   const handlePlayPlaylist = (playlistData: Playlist) => {
     if (playlistData.songs.length > 0) {
-      // Ensure the playlist passed is the songs array from the playlistData
       handlePlaySong(playlistData.songs[0], playlistData.songs);
     }
   };
 
-  // Save mood
-  const saveMood = (selectedMood: string) => {
-    if (!currentSong) return;
-    setMood((prev) =>
-      prev ? Array.from(new Set([...prev, selectedMood])) : [selectedMood]
-    );
-  };
-
-  const handleConfirmMoodSave = async () => {
-    if (!currentSong || mood.length === 0 || !user) return;
-
-    try {
-      const now = new Date();
-      const historyRef = collection(db, "users", user.uid, "moodHistory");
-      await addDoc(historyRef, {
-        songId: currentSong.id,
-        title: currentSong.title,
-        artist: currentSong.artist,
-        moods: mood,
-        timestamp: Math.floor(playerTime),
-        listenedAt: now,
-        day: now.getDate(),
-        month: now.getMonth() + 1,
-        year: now.getFullYear(),
-        hours: now.getHours(),
-        minutes: now.getMinutes(),
-        seconds: now.getSeconds(),
-      });
-      alert("Mood saved!");
-      setMood([]);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save mood");
-    }
-  };
-
-  // Add to playlist
   const handleConfirmAddToPlaylist = async (playlistId: string) => {
-    if (!songToAdd || !user) return; // songToAdd is set by handlePlaySong
+    if (!songToAdd || !user) return;
 
     try {
       if (playlistId === "new") {
@@ -352,7 +272,6 @@ const Dashboard: React.FC = () => {
         });
         if (!response.ok) throw new Error('Failed to create playlist');
       } else {
-        // Get current playlist first
         const getResponse = await fetch(`http://localhost:8888/api/music/user/${user.uid}/playlists`);
         if (getResponse.ok) {
           const playlists = await getResponse.json();
@@ -369,7 +288,6 @@ const Dashboard: React.FC = () => {
         }
       }
 
-      // Refresh genre playlists
       await fetchAllSongs();
       setShowAddToPlaylistModal(false);
       setSongToAdd(null);
@@ -384,9 +302,8 @@ const Dashboard: React.FC = () => {
   };
 
   const toggleLike = async (song?: Song) => {
-    const targetSong = song || currentSong; // Use currentSong from context
+    const targetSong = song || currentSong;
     if (!targetSong || !user) {
-      console.log('Cannot toggle like: no song or user');
       return;
     }
     
@@ -394,28 +311,20 @@ const Dashboard: React.FC = () => {
       const userRef = doc(db, 'users', user.uid);
       const likedSongsRef = collection(userRef, 'likedSongs');
       
-      // The likedSongs state is a number[] (array of song IDs)
       if (likedSongs.includes(targetSong.id)) {
-        // Unlike: remove from state
-        console.log('Unliking song:', targetSong.title);
         setLikedSongs(likedSongs.filter(id => id !== targetSong.id));
-        setLikedSongsPlaylist(likedSongsPlaylist.filter(s => s.id !== targetSong.id)); // Filter by id
-        // Remove from Firestore (mark as deleted)
+        setLikedSongsPlaylist(likedSongsPlaylist.filter(s => s.id !== targetSong.id));
         const likedDocs = await getDocs(likedSongsRef);
         const songDoc = likedDocs.docs.find(doc => doc.data().id === targetSong.id);
         if (songDoc) {
           await updateDoc(doc(db, 'users', user.uid, 'likedSongs', songDoc.id), {
             deleted: true
           });
-          console.log('Song unliked successfully');
         }
       } else {
-        // Like: add to state
-        console.log('Liking song:', targetSong.title);
-        setLikedSongs([...likedSongs, targetSong.id]); // Add ID to likedSongs
-        setLikedSongsPlaylist([targetSong, ...likedSongsPlaylist]); // Add full song to likedSongsPlaylist
-        // Add to Firestore
-        const docRef = await addDoc(likedSongsRef, {
+        setLikedSongs([...likedSongs, targetSong.id]);
+        setLikedSongsPlaylist([targetSong, ...likedSongsPlaylist]);
+        await addDoc(likedSongsRef, {
           id: targetSong.id,
           title: targetSong.title,
           artist: targetSong.artist,
@@ -424,7 +333,6 @@ const Dashboard: React.FC = () => {
           previewUrl: targetSong.previewUrl,
           likedAt: new Date().toISOString()
         });
-        console.log('Song liked successfully, doc ID:', docRef.id);
       }
     } catch (err) {
       console.error('Failed to toggle like:', err);
@@ -432,7 +340,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleEmojiSelect = async (emoji: string) => {
-    if (!currentSong || !user) return; // Use currentSong from context
+    if (!currentSong || !user) return;
     
     try {
       const now = new Date();
@@ -450,7 +358,7 @@ const Dashboard: React.FC = () => {
         year: now.getFullYear(),
         hours: now.getHours(),
         minutes: now.getMinutes(),
-        seconds: now.getMinutes(), // Corrected seconds to use getMinutes for now.getHours for some reason
+        seconds: now.getMinutes(),
       });
     } catch (err) {
       console.error("Failed to save emoji reaction:", err);
@@ -467,7 +375,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard">
-      {/* Sidebar */}
       <aside className="sidenav">
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
@@ -518,13 +425,11 @@ const Dashboard: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="main-content">
         <div className="dashboard-header">
           <h2 className="dashboard-greeting">Hello, {name}!</h2>
         </div>
         
-        {/* Search */}
         <div className="search-container">
           <form onSubmit={handleSearch} className="search-form">
             <input
@@ -546,17 +451,15 @@ const Dashboard: React.FC = () => {
 
         {error && <div className="error-message">{error}</div>}
 
-        {/* Playlists */}
         {(playlists.length > 0 || likedSongs.length > 0) && (
           <div className="songs-section">
             <h3 className="section-title">Your Playlists</h3>
             <div className="playlists-grid">
-              {/* Liked Songs Playlist */}
               {likedSongsPlaylist.length > 0 && (
                 <div className="playlist-card-wrapper">
                   <div 
                     className="playlist-card-custom liked-playlist" 
-                    onClick={() => navigate(`/playlist/Liked Songs`)}
+                    onClick={() => navigate('/liked-songs')}
                   >
                     <div className="playlist-artwork">
                       <div className="playlist-placeholder liked-placeholder">
@@ -628,7 +531,6 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Search Results */}
         {searchResults.length > 0 && (
           <div className="songs-section">
             <h3 className="section-title">Search Results</h3>
@@ -663,7 +565,6 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Recommended Songs */}
         {songs.length > 0 && (
           <div className="songs-section">
             <h3 className="section-title">Recommended for You</h3>
@@ -706,33 +607,10 @@ const Dashboard: React.FC = () => {
         )}
       </main>
 
-      {/* Music Player Modal (uses currentSong from context) */}
       {currentSong && showAddToPlaylistModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <img src={currentSong.artwork} alt={currentSong.title} className="music-modal-image" />
-            
-            <h3 className="mood-section-title">How are you feeling?</h3>
-            <div className="mood-buttons">
-              {MOODS.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => saveMood(m)}
-                  className={`mood-btn ${mood.includes(m) ? 'selected' : ''}`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-            
-            {mood.length > 0 && (
-              <button
-                onClick={handleConfirmMoodSave}
-                className="modal-btn"
-              >
-                Save Mood
-              </button>
-            )}
 
             <h3 className="mood-section-title">Add to Playlist</h3>
             <div className="playlist-list">
@@ -774,10 +652,6 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Hidden audio element - now managed by AudioPlayerContext. No direct audioRef here. */}
-      {/* The actual <audio> element should be rendered by the AudioPlayerProvider */}
-
-      {/* Music Player UI (uses currentSong from context) */}
       {currentSong && (
         <div className="music-player">
           <div className="player-left">
@@ -788,7 +662,6 @@ const Dashboard: React.FC = () => {
                 className="player-album-art"
               />
               <AudioVisualizer 
-                // Removed audioElement prop. AudioVisualizer now consumes audioRef from context directly.
                 isPlaying={isPlaying} 
               />
             </div>
@@ -850,22 +723,22 @@ const Dashboard: React.FC = () => {
               <EmojiReaction onEmojiSelect={handleEmojiSelect} />
               <VolumeControl
                 volume={volume}
-                onVolumeChange={setVolume} // Use context's setVolume
+                onVolumeChange={setVolume}
                 onToggleMute={toggleMute}
               />
               <PlaybackSpeedControl
                 speed={playbackRate}
-                onChange={setPlaybackRate} // Use context's setPlaybackRate
+                onChange={setPlaybackRate}
               />
               <button 
                 className={`volume-btn ${isRepeat ? 'liked' : ''}`}
-                onClick={toggleRepeat} // Use context's toggleRepeat
+                onClick={toggleRepeat}
               >
                 <MdRepeat size={18} />
               </button>
               <button 
                 className={`volume-btn ${isShuffle ? 'liked' : ''}`}
-                onClick={toggleShuffle} // Use context's toggleShuffle
+                onClick={toggleShuffle}
               >
                 <MdShuffle size={18} />
               </button>

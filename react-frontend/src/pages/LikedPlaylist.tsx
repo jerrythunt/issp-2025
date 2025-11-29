@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MdDashboard,
   MdTimeline,
@@ -33,35 +34,8 @@ interface Playlist {
   songs: Song[];
 }
 
-const fetchSongsByGenre = async (genre: string): Promise<Song[]> => {
-  try {
-    const response = await fetch(
-      `https://itunes.apple.com/search?term=${encodeURIComponent(genre + " music")}&media=music&entity=song&limit=50`
-    );
-    const data = await response.json();
-
-    if (!data.results) return [];
-
-    return data.results
-      .filter((track: any) => track.previewUrl)
-      .slice(0, 20)
-      .map((track: any): Song => ({
-        id: track.trackId,
-        title: track.trackName,
-        artist: track.artistName,
-        artwork: track.artworkUrl100.replace("100x100", "300x300"),
-        genre: track.primaryGenreName,
-        previewUrl: track.previewUrl,
-      }));
-  } catch (err) {
-    console.error("iTunes API error:", err);
-    return [];
-  }
-};
-
-const PlaylistDetail: React.FC = () => {
+const LikedPlaylist: React.FC = () => {
   const navigate = useNavigate();
-  const { playlistName } = useParams<{ playlistName: string }>();
   const [user, setUser] = useState<User | null>(null);
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,65 +64,10 @@ const PlaylistDetail: React.FC = () => {
     setPlaylist: setAudioPlayerPlaylist,
   } = useAudioPlayerContext();
 
-  const fetchPlaylist = useCallback(async (name: string, currentUser: User) => {
-    setLoading(true);
-    try {
-      const decodedName = decodeURIComponent(name);
-      let fetchedPlaylist: Playlist | null = null;
-
-      if (decodedName === "Liked Songs") {
-        const likedSongsRef = collection(db, 'users', currentUser.uid, 'likedSongs');
-        const likedDocs = await getDocs(likedSongsRef);
-        const likedSongsData = likedDocs.docs
-          .filter(doc => !doc.data().deleted)
-          .map(doc => {
-            const data = doc.data();
-            return {
-              id: data.id,
-              title: data.title,
-              artist: data.artist,
-              artwork: data.artwork,
-              genre: data.genre,
-              previewUrl: data.previewUrl
-            } as Song;
-          })
-          .sort((a, b) => {
-            const aData = likedDocs.docs.find(d => d.data().id === a.id)?.data();
-            const bData = likedDocs.docs.find(d => d.data().id === b.id)?.data();
-            const aTime = aData?.likedAt ? new Date(aData.likedAt).getTime() : 0;
-            const bTime = bData?.likedAt ? new Date(bData.likedAt).getTime() : 0;
-            return bTime - aTime;
-          });
-
-        fetchedPlaylist = {
-          id: 'liked-songs',
-          name: 'Liked Songs',
-          songs: likedSongsData
-        };
-      } else {
-        const songs = await fetchSongsByGenre(decodedName);
-        fetchedPlaylist = {
-          id: decodedName,
-          name: decodedName,
-          songs: songs
-        };
-      }
-
-      setPlaylist(fetchedPlaylist);
-      if (fetchedPlaylist && fetchedPlaylist.songs.length > 0) {
-        setAudioPlayerPlaylist(fetchedPlaylist.songs);
-      }
-    } catch (err) {
-      console.error("Failed to fetch playlist:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [setAudioPlayerPlaylist]);
-
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
-      if (currentUser && playlistName) {
+      if (currentUser) {
         try {
           const likedSongsRef = collection(db, 'users', currentUser.uid, 'likedSongs');
           const likedDocs = await getDocs(likedSongsRef);
@@ -156,18 +75,50 @@ const PlaylistDetail: React.FC = () => {
             .filter(doc => !doc.data().deleted)
             .map(doc => doc.data().id);
           setLikedSongs(likedIds);
-        } catch (err) {
-          console.error('Failed to load liked songs:', err);
-        }
 
-        fetchPlaylist(playlistName, currentUser);
+          const likedSongsData = likedDocs.docs
+            .filter(doc => !doc.data().deleted)
+            .map(doc => {
+              const data = doc.data();
+              return {
+                id: data.id,
+                title: data.title,
+                artist: data.artist,
+                artwork: data.artwork,
+                genre: data.genre,
+                previewUrl: data.previewUrl
+              } as Song;
+            })
+            .sort((a, b) => {
+              const aData = likedDocs.docs.find(d => d.data().id === a.id)?.data();
+              const bData = likedDocs.docs.find(d => d.data().id === b.id)?.data();
+              const aTime = aData?.likedAt ? new Date(aData.likedAt).getTime() : 0;
+              const bTime = bData?.likedAt ? new Date(bData.likedAt).getTime() : 0;
+              return bTime - aTime;
+            });
+
+          const fetchedPlaylist = {
+            id: 'liked-songs',
+            name: 'Liked Songs',
+            songs: likedSongsData
+          };
+
+          setPlaylist(fetchedPlaylist);
+          if (fetchedPlaylist.songs.length > 0) {
+            setAudioPlayerPlaylist(fetchedPlaylist.songs);
+          }
+        } catch (err) {
+          console.error("Failed to fetch liked songs:", err);
+        } finally {
+          setLoading(false);
+        }
       } else {
         setLoading(false);
       }
     });
 
     return () => unsubscribe();
-  }, [playlistName, fetchPlaylist]);
+  }, [setAudioPlayerPlaylist]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -184,8 +135,7 @@ const PlaylistDetail: React.FC = () => {
     if (!user) return;
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const likedSongsRef = collection(userRef, 'likedSongs');
+      const likedSongsRef = collection(db, 'users', user.uid, 'likedSongs');
 
       if (likedSongs.includes(song.id)) {
         setLikedSongs(likedSongs.filter(id => id !== song.id));
@@ -213,6 +163,17 @@ const PlaylistDetail: React.FC = () => {
           previewUrl: song.previewUrl,
           likedAt: new Date().toISOString()
         });
+
+        // To ensure the UI updates immediately, we can add the song to the playlist state
+        if (playlist) {
+          setPlaylist({
+            ...playlist,
+            songs: [song, ...playlist.songs] 
+          });
+        } else {
+          // If playlist doesn't exist for some reason, create it
+          setPlaylist({ id: 'liked-songs', name: 'Liked Songs', songs: [song] });
+        }
       }
     } catch (err) {
       console.error('Failed to toggle like:', err);
@@ -469,4 +430,4 @@ const PlaylistDetail: React.FC = () => {
   );
 };
 
-export default PlaylistDetail;
+export default LikedPlaylist;

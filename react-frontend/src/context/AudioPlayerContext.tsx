@@ -232,29 +232,34 @@ export const AudioPlayerProvider: React.FC<React.PropsWithChildren<unknown>> = (
 
 
   const setPlaylist = useCallback((songs: Song[], source?: string) => {
+    const isCurrentlyPlaying = audioRef.current && !audioRef.current.paused;
+
     setCurrentPlaylist(songs);
     if (source) {
       setCurrentPlaylistSource(source);
     }
-    // If setting a new playlist, prepare the first song but don't auto-play
-    if (songs.length > 0) {
-      setCurrentIndex(0);
-      setCurrentSong(songs[0]);
-      if (audioRef.current) {
-        audioRef.current.src = songs[0].previewUrl;
-        audioRef.current.load(); // Load the source, but don\'t play automatically here
-        setIsPlaying(false); // Ensure isPlaying is false, waiting for user to click play
-      }
-    } else { // Empty playlist
-      setCurrentIndex(-1);
-      setCurrentSong(null);
-      if (audioRef.current) {
-        audioRef.current.src = '';
-        audioRef.current.load();
-        setIsPlaying(false);
+
+    // Only set the first song if nothing is currently playing.
+    if (!isCurrentlyPlaying) {
+      if (songs.length > 0) {
+        setCurrentIndex(0);
+        setCurrentSong(songs[0]);
+        if (audioRef.current) {
+          audioRef.current.src = songs[0].previewUrl;
+          audioRef.current.load();
+          setIsPlaying(false);
+        }
+      } else {
+        setCurrentIndex(-1);
+        setCurrentSong(null);
+        if (audioRef.current) {
+          audioRef.current.src = '';
+          audioRef.current.load();
+          setIsPlaying(false);
+        }
       }
     }
-  }, []); // Removed currentSong from dependency array
+  }, []);
 
 
   const togglePlay = useCallback(() => {

@@ -16,18 +16,24 @@ import ContactPage from './pages/ContactPage';
 import FrontPage from './pages/FrontPage';
 import Dashboard from './pages/Dashboard';
 import PlaylistDetail from './pages/PlaylistDetail';
+import LikedPlaylist from './pages/LikedPlaylist';
 import Timeline from './pages/Timeline';
 import FAQPage from './pages/FAQPage';
 import MoodHistory from './pages/MoodHistory';
 import ProfilePage from './pages/ProfilePage';
 import { AudioPlayerProvider } from './context/AudioPlayerContext';
 import PrivateRoute from './components/PrivateRoute';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 
 function AppContent() {
   const location = useLocation();
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/playlist/') || location.pathname === '/timeline' || location.pathname === '/mood-history' || location.pathname === '/profile';
+  const isDashboard = location.pathname.startsWith('/dashboard') || 
+                    location.pathname.startsWith('/playlist/') || 
+                    location.pathname === '/timeline' || 
+                    location.pathname === '/mood-history' || 
+                    location.pathname === '/profile' ||
+                    location.pathname === '/liked-songs';
 
   return (
     <div className="App">
@@ -46,6 +52,7 @@ function AppContent() {
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/dashboard/faq" element={<PrivateRoute><FAQPage /></PrivateRoute>} />
         <Route path="/playlist/:playlistName" element={<PrivateRoute><PlaylistDetail /></PrivateRoute>} />
+        <Route path="/liked-songs" element={<PrivateRoute><LikedPlaylist /></PrivateRoute>} />
         <Route path="/timeline" element={<PrivateRoute><Timeline /></PrivateRoute>} />
         <Route path="/mood-history" element={<PrivateRoute><MoodHistory /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
@@ -56,12 +63,10 @@ function AppContent() {
 }
 
 function App() {
-  // const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      // setUser(currentUser); // The ESLint warning refers to the 'user' variable, not 'setUser'
       setLoading(false);
     });
     return () => unsubscribe();
