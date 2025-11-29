@@ -4,7 +4,6 @@ import {
   MdDashboard,
   MdPerson,
   MdTimeline,
-  MdSettings,
   MdHelpOutline,
   MdLogout,
   MdSkipPrevious,
@@ -19,7 +18,6 @@ import {
   MdMoreHoriz,
   MdRepeat,
   MdMenu,
-  MdClose
 } from 'react-icons/md';
 import { usePageTitle } from './hooks/usePageTitle';
 import { logout } from '../firebaseAuth';
@@ -57,9 +55,6 @@ const FAQPage: React.FC = () => {
     playbackRate,
     isRepeat,
     isShuffle,
-    // currentPlaylist, // Removed as per instruction
-    audioRef, // HTMLAudioElement directly
-    // playSong, // Removed as per instruction
     togglePlay,
     playNext,
     playPrevious,

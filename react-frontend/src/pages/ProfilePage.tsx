@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   MdDashboard,
   MdTimeline,
-  MdSettings,
   MdHelpOutline,
   MdLogout,
   MdPerson,
@@ -17,7 +16,6 @@ import {
   MdShuffle,    // Added for audio player
   MdMoreHoriz,   // Added for audio player
   MdMenu, // Added for hamburger menu
-  MdClose // Added for hamburger menu
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
@@ -30,7 +28,6 @@ import PlaybackSpeedControl from '../components/PlaybackSpeedControl'; // Added 
 import EmojiReaction from '../components/EmojiReaction'; // Added for audio player
 import { Song } from '../data/musicLibrary'; // Added for toggleLike function
 
-const BACKEND_URL = 'http://localhost:8888/api/music';
 const GENRES = [
   "Pop", "Rock", "Jazz", "Hip-Hop", "Classical", "Electronic", "Country", "Reggae", "R&B", "Metal",
   "Indie", "Alternative", "Blues", "Folk", "Punk", "Soul", "Funk", "Latin", "K-Pop", "EDM",
@@ -53,9 +50,6 @@ const ProfilePage: React.FC = () => {
   const [editingPhone, setEditingPhone] = useState(false);
   const [showGenreModal, setShowGenreModal] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false); // Added for consistency with dashboard player
-  const [songToAdd, setSongToAdd] = useState<Song | null>(null); // Added for consistency with dashboard player
-  const [newPlaylistNameModal, setNewPlaylistNameModal] = useState(""); // Added for consistency with dashboard player
   const [likedSongs, setLikedSongs] = useState<number[]>([]); // Added for audio player liked status
   const [isSidenavOpen, setIsSidenavOpen] = useState(true);
 
@@ -70,8 +64,6 @@ const ProfilePage: React.FC = () => {
     isRepeat,
     isShuffle,
     currentPlaylist, // Needed for playNext/Previous disabled state
-    audioRef,
-    playSong,
     togglePlay,
     playNext,
     playPrevious,
@@ -81,7 +73,6 @@ const ProfilePage: React.FC = () => {
     setPlaybackRate,
     toggleShuffle,
     toggleRepeat,
-    setPlaylist, // Renamed from setAudioPlayerPlaylist to avoid clash if needed
   } = useAudioPlayerContext();
 
   useEffect(() => {
@@ -669,7 +660,7 @@ const ProfilePage: React.FC = () => {
               </button>
               <button
                 className="volume-btn"
-                onClick={() => setShowAddToPlaylistModal(true)}
+                onClick={() => {}}
                 title="Add to playlist"
               >
                 <MdMoreHoriz size={18} />

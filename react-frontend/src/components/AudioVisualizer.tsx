@@ -12,7 +12,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ isPlaying }) => {
   const animationRef = useRef<number | null>(null);
 
   // Get audioCtx and analyser from the AudioPlayerContext
-  const { audioRef, analyser, audioCtx } = useAudioPlayerContext();
+  const { analyser, audioCtx } = useAudioPlayerContext();
 
   // The first useEffect that used to create AudioContext and Analyser is now removed
   // as they are provided by the context.
