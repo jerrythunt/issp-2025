@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import './Signup.css';
 import { useNavigate } from 'react-router-dom';
 import { signUp, signInWithGoogle, signInAnonymously } from '../firebaseAuth';
+import { db } from '../firebaseConfig';
+import { doc, setDoc } from 'firebase/firestore';
 
 const Signup: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -63,8 +65,7 @@ const Signup: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
+  const finishSignUp = async (genres: string[]) => {
     setError(null);
     setLoading(true);
 
@@ -83,7 +84,21 @@ const Signup: React.FC = () => {
     try {
       const userCredential = await signUp(formData.email, formData.password);
       if (userCredential && userCredential.user) {
-        navigate('/dashboard', { state: { selectedGenres: formData.selectedGenres } });
+        const user = userCredential.user;
+        const userRef = doc(db, 'users', user.uid);
+
+        let birthDate = '';
+        if (formData.birthYear && formData.birthMonth && formData.birthDay) {
+          birthDate = `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`;
+        }
+
+        await setDoc(userRef, {
+            email: user.email,
+            preferences: genres,
+            dateOfBirth: birthDate,
+        }, { merge: true });
+
+        navigate('/dashboard');
       }
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
@@ -102,6 +117,11 @@ const Signup: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    await finishSignUp(formData.selectedGenres);
   };
 
   const handleGoogleSignIn = async () => {
@@ -116,12 +136,7 @@ const Signup: React.FC = () => {
   };
   
   const handleSkip = async () => {
-    try {
-      await signInAnonymously();
-      navigate('/dashboard');
-    } catch (error) {
-      setError('Failed to skip. Please try again later.');
-    }
+    await finishSignUp([]);
   };
 
 

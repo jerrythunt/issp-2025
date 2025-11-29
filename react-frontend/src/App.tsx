@@ -35,28 +35,32 @@ function AppContent() {
                     location.pathname === '/profile' ||
                     location.pathname === '/liked-songs';
 
+  const appRoutes = (
+    <Routes>
+      <Route path="/" element={<FrontPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/team" element={<TeamPage />} />
+      <Route path="/science" element={<SciencePage />} />
+      <Route path="/knowledge-center" element={<KnowledgeCenterPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+      <Route path="/dashboard/faq" element={<PrivateRoute><FAQPage /></PrivateRoute>} />
+      <Route path="/playlist/:playlistName" element={<PrivateRoute><PlaylistDetail /></PrivateRoute>} />
+      <Route path="/liked-songs" element={<PrivateRoute><LikedPlaylist /></PrivateRoute>} />
+      <Route path="/timeline" element={<PrivateRoute><Timeline /></PrivateRoute>} />
+      <Route path="/mood-history" element={<PrivateRoute><MoodHistory /></PrivateRoute>} />
+      <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+    </Routes>
+  );
+
   return (
     <div className="App">
       <DebugInfo />
       {!isDashboard && <Header />}
-      <Routes>
-        <Route path="/" element={<FrontPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/blog" element={<BlogPage />} />
-        <Route path="/team" element={<TeamPage />} />
-        <Route path="/science" element={<SciencePage />} />
-        <Route path="/knowledge-center" element={<KnowledgeCenterPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/dashboard/faq" element={<PrivateRoute><FAQPage /></PrivateRoute>} />
-        <Route path="/playlist/:playlistName" element={<PrivateRoute><PlaylistDetail /></PrivateRoute>} />
-        <Route path="/liked-songs" element={<PrivateRoute><LikedPlaylist /></PrivateRoute>} />
-        <Route path="/timeline" element={<PrivateRoute><Timeline /></PrivateRoute>} />
-        <Route path="/mood-history" element={<PrivateRoute><MoodHistory /></PrivateRoute>} />
-        <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-      </Routes>
+      {isDashboard ? <AudioPlayerProvider>{appRoutes}</AudioPlayerProvider> : appRoutes}
       {!isDashboard && <Footer />}
     </div>
   );
@@ -78,9 +82,7 @@ function App() {
 
   return (
     <Router>
-      <AudioPlayerProvider>
-        <AppContent />
-      </AudioPlayerProvider>
+      <AppContent />
     </Router>
   );
 }

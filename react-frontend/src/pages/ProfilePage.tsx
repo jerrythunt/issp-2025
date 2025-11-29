@@ -15,7 +15,9 @@ import {
   MdFavoriteBorder, // Added for audio player
   MdRepeat,     // Added for audio player
   MdShuffle,    // Added for audio player
-  MdMoreHoriz   // Added for audio player
+  MdMoreHoriz,   // Added for audio player
+  MdMenu, // Added for hamburger menu
+  MdClose // Added for hamburger menu
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
@@ -55,6 +57,7 @@ const ProfilePage: React.FC = () => {
   const [songToAdd, setSongToAdd] = useState<Song | null>(null); // Added for consistency with dashboard player
   const [newPlaylistNameModal, setNewPlaylistNameModal] = useState(""); // Added for consistency with dashboard player
   const [likedSongs, setLikedSongs] = useState<number[]>([]); // Added for audio player liked status
+  const [isSidenavOpen, setIsSidenavOpen] = useState(true);
 
   // Use AudioPlayerContext
   const {
@@ -118,7 +121,7 @@ const ProfilePage: React.FC = () => {
         setSelectedGenres(data.preferences || []);
 
         // If no preferences set, automatically show genre selection
-        if (!data.preferences || data.preferences.length < 3) {
+        if (!data.preferences || data.preferences.length === 0) {
           setShowGenreModal(true);
         }
       } else {
@@ -135,15 +138,7 @@ const ProfilePage: React.FC = () => {
     try {
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, { name }, { merge: true });
-      // The backend URL is commented out, so directly use Firestore
-      // const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ name })
-      // });
-      // if (response.ok) {
-        setEditingName(false);
-      // }
+      setEditingName(false);
     } catch (err) {
       console.error('Failed to update name:', err);
     }
@@ -154,14 +149,7 @@ const ProfilePage: React.FC = () => {
     try {
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, { dateOfBirth }, { merge: true });
-      // const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ dateOfBirth })
-      // });
-      // if (response.ok) {
-        setEditingDOB(false);
-      // }
+      setEditingDOB(false);
     } catch (err) {
       console.error('Failed to update DOB:', err);
     }
@@ -172,14 +160,7 @@ const ProfilePage: React.FC = () => {
     try {
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, { phoneNumber }, { merge: true });
-      // const response = await fetch(`${BACKEND_URL}/user/${user.uid}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ phoneNumber })
-      // });
-      // if (response.ok) {
-        setEditingPhone(false);
-      // }
+      setEditingPhone(false);
     } catch (err) {
       console.error('Failed to update phone:', err);
     }
@@ -194,10 +175,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleSaveGenres = async () => {
-    if (!user || selectedGenres.length < 3) {
-      alert('Please select at least 3 genres');
-      return;
-    }
+    if (!user) return;
     try {
       // Save to Firestore
       const userRef = doc(db, 'users', user.uid);
@@ -279,6 +257,20 @@ const ProfilePage: React.FC = () => {
     // In a real app, you'd likely save this mood to Firestore linked to the current song
   };
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setIsSidenavOpen(false);
+      } else {
+        setIsSidenavOpen(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (loading) {
     return (
       <div className="profile-page">
@@ -291,8 +283,11 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-page">
+      <button className={`sidenav-toggle ${isSidenavOpen ? 'shifted' : ''}`}  onClick={() => setIsSidenavOpen(!isSidenavOpen)}>
+                <MdMenu size={24} />
+      </button>
       {/* Sidebar */}
-      <aside className="sidenav">
+      <aside className={`sidenav ${isSidenavOpen ? 'open' : ''}`}>
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <img
@@ -335,10 +330,6 @@ const ProfilePage: React.FC = () => {
               <span>Log out</span>
             </div>
           </nav>
-        </div>
-
-        <div className="version-info">
-          <span>version 5.5.1</span>
         </div>
       </aside>
 
@@ -520,14 +511,12 @@ const ProfilePage: React.FC = () => {
         <section className="profile-section">
           <div className="section-header-with-edit">
             <h2 className="section-title">Music Preferences</h2>
-            {preferences.length > 0 && (
-              <button
-                className="edit-btn"
-                onClick={() => setShowGenreModal(!showGenreModal)}
-              >
-                {showGenreModal ? 'Cancel' : 'Edit'}
-              </button>
-            )}
+            <button
+              className="edit-btn"
+              onClick={() => setShowGenreModal(!showGenreModal)}
+            >
+              {showGenreModal ? 'Cancel' : (preferences.length > 0 ? 'Edit' : 'Add')}
+            </button>
           </div>
           <div className="section-divider"></div>
 
@@ -544,15 +533,15 @@ const ProfilePage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div style={{ padding: '1rem', background: '#FFF3E0', borderRadius: '8px', marginTop: '1rem' }}>
-                <p style={{ color: '#ED6F3A', fontWeight: 'bold', margin: 0 }}>
-                  ⚠️ Please select at least 3 genres to continue
+              <div style={{ padding: '1rem', background: '#F0F0F0', borderRadius: '8px', marginTop: '1rem' }}>
+                <p style={{ margin: 0 }}>
+                  You have no saved music preferences. Edit them to get better recommendations.
                 </p>
               </div>
             )
           ) : (
             <div className="genre-selection-inline">
-              <p className="genre-instruction">Select Your Favorite Genres (minimum 3)</p>
+              <p className="genre-instruction">Select Your Favorite Genres</p>
               <div className="genre-grid">
                 {GENRES.map((genre) => (
                   <button
@@ -568,14 +557,9 @@ const ProfilePage: React.FC = () => {
                 <button
                   onClick={handleSaveGenres}
                   className="save-btn"
-                  disabled={selectedGenres.length < 3}
-                  style={{
-                    padding: '12px 24px',
-                    opacity: selectedGenres.length < 3 ? 0.5 : 1,
-                    cursor: selectedGenres.length < 3 ? 'not-allowed' : 'pointer'
-                  }}
+                  style={{ padding: '12px 24px' }}
                 >
-                  Save Preferences ({selectedGenres.length}/3 minimum)
+                  Save Preferences
                 </button>
               </div>
             </div>
@@ -583,7 +567,7 @@ const ProfilePage: React.FC = () => {
         </section>
       </main>
 
-      {/* Music Player UI (uses currentSong from context) */}.
+      {/* Music Player UI (uses currentSong from context) */}
       {currentSong && (
         <div className="music-player">
           <div className="player-left">

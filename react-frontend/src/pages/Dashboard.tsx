@@ -15,7 +15,8 @@ import {
   MdRepeat,
   MdShuffle,
   MdMoreHoriz,
-  MdPerson
+  MdPerson,
+  MdMenu
 } from 'react-icons/md';
 import VolumeControl from '../components/VolumeControl';
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
@@ -77,6 +78,7 @@ const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isSidenavOpen, setIsSidenavOpen] = useState(false);
   const [userPreferences, setUserPreferences] = useState<string[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [error, setError] = useState("");
@@ -134,7 +136,7 @@ const Dashboard: React.FC = () => {
           setName(
             data.name || `${data.firstName || ""} ${data.lastName || ""}`.trim() || user.email?.split('@')[0] || "User"
           );
-          if (!data.preferences || data.preferences.length < 3) {
+          if (!data.preferences || data.preferences.length < 0) {
             setLoading(false);
             navigate('/profile', { replace: true });
             return;
@@ -175,38 +177,40 @@ const Dashboard: React.FC = () => {
     fetchUserData();
   }, [user, navigate]);
 
-  const fetchAllSongs = async () => {
-    if (userPreferences.length === 0) return;
+  const DEFAULT_GENRES = ["pop"]; 
 
+  const fetchAllSongs = async () => {
+    const genresToFetch = userPreferences.length > 0 ? userPreferences : DEFAULT_GENRES;
+  
     let allSongs: Song[] = [];
     const newShownIds: Record<string, number[]> = { ...shownSongIds };
     const genrePlaylists: Playlist[] = [];
-
-    for (let genre of userPreferences) {
+  
+    for (let genre of genresToFetch) {
       const genreShownIds = newShownIds[genre] || [];
       const genreSongs = await fetchSongsByGenre(genre, genreShownIds);
       newShownIds[genre] = [...genreShownIds, ...genreSongs.map((s) => s.id)];
       allSongs = allSongs.concat(genreSongs);
-      
+  
       if (genreSongs.length > 0) {
         genrePlaylists.push({
           id: genre,
           name: genre,
-          songs: genreSongs
+          songs: genreSongs,
         });
       }
     }
-
+  
     setSongs(allSongs);
     setShownSongIds(newShownIds);
     setPlaylists(genrePlaylists);
   };
+  
 
   useEffect(() => {
-    if (userPreferences.length > 0) {
-      fetchAllSongs();
-    }
+    fetchAllSongs();
   }, [userPreferences]);
+  
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -375,7 +379,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard">
-      <aside className="sidenav">
+      <aside className={`sidenav ${isSidenavOpen ? 'open' : ''}`}>
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <img 
@@ -419,13 +423,12 @@ const Dashboard: React.FC = () => {
             </div>
           </nav>
         </div>
-
-        <div className="version-info">
-          <span>version 5.5.1</span>
-        </div>
       </aside>
 
       <main className="main-content">
+        <button className={`sidenav-toggle ${isSidenavOpen ? 'shifted' : ''}`}  onClick={() => setIsSidenavOpen(!isSidenavOpen)}>
+          <MdMenu size={24} />
+        </button>
         <div className="dashboard-header">
           <h2 className="dashboard-greeting">Hello, {name}!</h2>
         </div>

@@ -16,6 +16,8 @@ import {
   MdShuffle,   // Added for audio player UI
   MdMoreHoriz, // Added for audio player UI
   MdPerson,    // Added for Profile link
+  MdMenu, // Added for hamburger menu
+  MdClose // Added for hamburger menu
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
@@ -52,6 +54,7 @@ const Timeline: React.FC = () => {
   const [user, setUser] = useState<User | null>(null); // Re-enabled user state for Firebase operations
   const navigate = useNavigate();
   const [likedSongs, setLikedSongs] = useState<number[]>([]); // State for liked song IDs
+  const [isSidenavOpen, setIsSidenavOpen] = useState(true);
 
   // Use AudioPlayerContext
   const {
@@ -229,6 +232,20 @@ const Timeline: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setIsSidenavOpen(false);
+      } else {
+        setIsSidenavOpen(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   if (loading) {
     return (
@@ -242,7 +259,10 @@ const Timeline: React.FC = () => {
 
   return (
     <div className="timeline">
-      <aside className="sidenav">
+      <button className={`sidenav-toggle ${isSidenavOpen ? 'shifted' : ''}`}  onClick={() => setIsSidenavOpen(!isSidenavOpen)}>
+                <MdMenu size={24} />
+      </button>
+      <aside className={`sidenav ${isSidenavOpen ? 'open' : ''}`}>
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <img 
@@ -285,10 +305,6 @@ const Timeline: React.FC = () => {
               <span>Log out</span>
             </div>
           </nav>
-        </div>
-
-        <div className="version-info">
-          <span>version 5.5.1</span>
         </div>
       </aside>
 

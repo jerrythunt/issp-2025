@@ -130,12 +130,6 @@
   padding: 8px;
   gap: 8px;
   
-  position: absolute;
-  width: 209px;
-  height: 48px;
-  left: 854px;
-  top: 574px;
-  
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -346,18 +340,9 @@
 }
 
 .forgot-password-wrapper {
-  left: 800px;
-  width: 870px;
-}
-
-.forgot-password-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  font-family: 'Roboto', sans-serif;
-  font-size: 24px;
-  line-height: 32px;
-  color: #1E1E1E;
-  text-decoration: underline;
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: 708px;
+  margin: 10px auto;
 }

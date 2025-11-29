@@ -17,7 +17,9 @@ import {
   MdFavoriteBorder,
   MdFavorite,
   MdMoreHoriz,
-  MdRepeat
+  MdRepeat,
+  MdMenu,
+  MdClose
 } from 'react-icons/md';
 import { usePageTitle } from './hooks/usePageTitle';
 import { logout } from '../firebaseAuth';
@@ -43,6 +45,7 @@ const FAQPage: React.FC = () => {
   usePageTitle('FAQs');
   const navigate = useNavigate();
   const [openSet, setOpenSet] = useState<Set<string>>(new Set());
+  const [isSidenavOpen, setIsSidenavOpen] = useState(true);
 
   // Destructure values directly from the context
   const {
@@ -134,9 +137,26 @@ const FAQPage: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setIsSidenavOpen(false);
+      } else {
+        setIsSidenavOpen(true);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="dashboard">
-      <aside className="sidenav">
+      <button className={`sidenav-toggle ${isSidenavOpen ? 'shifted' : ''}`}  onClick={() => setIsSidenavOpen(!isSidenavOpen)}>
+                <MdMenu size={24} />
+      </button>
+      <aside className={`sidenav ${isSidenavOpen ? 'open' : ''}`}>
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <img
@@ -177,9 +197,6 @@ const FAQPage: React.FC = () => {
               <span>Log out</span>
             </div>
           </nav>
-        </div>
-        <div className="version-info">
-          <span>version 5.5.1</span>
         </div>
       </aside>
 
