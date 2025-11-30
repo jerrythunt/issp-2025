@@ -17,12 +17,14 @@ import {
   MdMoreHoriz,
   MdRepeat,
   MdShuffle,
+  MdMenu
 } from 'react-icons/md';
 import { auth, db } from '../firebaseConfig';
 import { User, signOut } from 'firebase/auth';
 import { collection, getDocs, doc, addDoc, updateDoc } from 'firebase/firestore';
 import AudioVisualizer from '../components/AudioVisualizer';
 import VolumeControl from '../components/VolumeControl';
+import EmojiReaction from '../components/EmojiReaction';
 import PlaybackSpeedControl from '../components/PlaybackSpeedControl';
 import './PlaylistDetail.css';
 import { Song } from '../data/musicLibrary';
@@ -40,6 +42,7 @@ const LikedPlaylist: React.FC = () => {
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [likedSongs, setLikedSongs] = useState<number[]>([]);
+  const [isSidenavOpen, setIsSidenavOpen] = useState(false);
 
   const {
     currentSong,
@@ -127,9 +130,43 @@ const LikedPlaylist: React.FC = () => {
   };
 
   const handlePlaySong = (song: Song, songsList: Song[]) => {
+    // ✅ Toggle play/pause if the same song is clicked
+    if (currentSong && currentSong.id === song.id) {
+      togglePlay();
+      return;
+    }
+  
+    // Otherwise, start playing the new song
     setAudioPlayerPlaylist(songsList);
     playSong(song, songsList);
   };
+  
+
+  const handleEmojiSelect = async (emoji: string) => {
+      if (!currentSong || !user) return;
+      
+      try {
+        const now = new Date();
+        const historyRef = collection(db, "users", user.uid, "moodHistory");
+        await addDoc(historyRef, {
+          songId: currentSong.id,
+          title: currentSong.title,
+          artist: currentSong.artist,
+          artwork: currentSong.artwork,
+          emoji: emoji,
+          timestamp: Math.floor(playerTime),
+          listenedAt: now,
+          day: now.getDate(),
+          month: now.getMonth() + 1,
+          year: now.getFullYear(),
+          hours: now.getHours(),
+          minutes: now.getMinutes(),
+          seconds: now.getMinutes(),
+        });
+      } catch (err) {
+        console.error("Failed to save emoji reaction:", err);
+      }
+    };
 
   const toggleLike = async (song: Song) => {
     if (!user) return;
@@ -208,7 +245,7 @@ const LikedPlaylist: React.FC = () => {
 
   return (
     <div className="playlist-detail">
-      <aside className="sidenav">
+      <aside className={`sidenav ${isSidenavOpen ? 'open' : ''}`}>
         <div className="sidenav-header">
           <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <img
@@ -253,10 +290,13 @@ const LikedPlaylist: React.FC = () => {
           </nav>
         </div>
 
-        <div className="version-info">version 5.5.1</div>
+        <div className="version-info"></div>
       </aside>
 
       <main className="playlist-content">
+        <button className={`sidenav-toggle ${isSidenavOpen ? 'shifted' : ''}`} onClick={() => setIsSidenavOpen(!isSidenavOpen)}>
+                  <MdMenu size={24} />
+        </button>
         <div className="playlist-header">
           <button
             className="btn-login"
@@ -389,6 +429,7 @@ const LikedPlaylist: React.FC = () => {
 
           <div className="player-right">
             <div className="volume-controls">
+              <EmojiReaction onEmojiSelect={handleEmojiSelect} />
               <VolumeControl
                 volume={volume}
                 onVolumeChange={setVolume}
