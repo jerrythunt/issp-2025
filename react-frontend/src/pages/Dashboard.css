@@ -482,6 +482,10 @@
   color: #ff7744;
 }
 
+.sidenav-toggle {
+    display: none;
+}
+
 /* Responsive Design */
 @media (max-width: 1440px) {
   .playlists-grid {

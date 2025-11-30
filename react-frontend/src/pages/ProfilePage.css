@@ -136,6 +136,10 @@
   background: #D66234;
 }
 
+.sidenav-toggle {
+    display: none;
+}
+
 /* Music Tiles */
 .music-tiles {
   display: grid;

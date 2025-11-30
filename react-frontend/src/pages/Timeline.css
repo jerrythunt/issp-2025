@@ -77,6 +77,10 @@
   font-size: 0.8rem;
 }
 
+.sidenav-toggle {
+    display: none;
+}
+
 @media (max-width: 1440px) {
   .playlists-grid {
     grid-template-columns: repeat(auto-fill, 250px);

@@ -69,6 +69,10 @@
 .dashboard-main { padding: 20px; }
 .dashboard-player { grid-column: 1 / -1; }
 
+.sidenav-toggle {
+    display: none;
+}
+
 @media (max-width: 1440px) {
   .playlists-grid {
     grid-template-columns: repeat(auto-fill, 250px);
